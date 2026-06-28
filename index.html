@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎨 مولد صناديق الظلال - Shadow Box</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            background: white;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .controls {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        input[type="file"] { margin: 10px; }
+        .slider-container { margin: 15px 0; }
+        slider { width: 80%; }
+        canvas {
+            max-width: 100%;
+            margin-top: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            background: #fff;
+        }
+        .btn {
+            background-color: #0070f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover { background-color: #0051cb; }
+        #status { color: red; font-weight: bold; margin: 10px; }
+    </style>
+    <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+</head>
+<body>
+
+<div class="container">
+    <h1>🎨 مـولد صـناديق الظلال (Shadow Box)</h1>
+    <p>ارفع صورتك لتحويلها فوراً إلى تصميم صندوق مفرود للقص</p>
+    
+    <div id="status">جاري تحميل محرك معالجة الصور (OpenCV)... برجاء الانتظار</div>
+
+    <div class="controls">
+        <input type="file" id="fileInput" accept="image/*" disabled><br>
+        <div class="slider-container">
+            <label for="thresholdSlider">درجة عزل الظلال (Threshold): </label>
+            <input type="range" id="thresholdSlider" min="0" max="255" value="127" disabled>
+            <span id="thresholdValue">127</span>
+        </div>
+    </div>
+
+    <div>
+        <h3>النتيجة المفرودة (Unfolded Layout):</h3>
+        <canvas id="canvasOutput"></canvas>
+    </div>
+    
+    <button class="btn" id="downloadBtn" style="display:none;">💾 تحميل التصميم الناتج</button>
+</div>
+
+<script>
+    let imgElement = new Image();
+    let fileInput = document.getElementById('fileInput');
+    let thresholdSlider = document.getElementById('thresholdSlider');
+    let thresholdValue = document.getElementById('thresholdValue');
+    let downloadBtn = document.getElementById('downloadBtn');
+
+    function onOpenCvReady() {
+        document.getElementById('status').style.display = 'none';
+        fileInput.disabled = false;
+        thresholdSlider.disabled = false;
+    }
+
+    fileInput.addEventListener('change', (e) => {
+        if(e.target.files.length > 0) {
+            imgElement.src = URL.createObjectURL(e.target.files[0]);
+        }
+    }, false);
+
+    imgElement.onload = function() {
+        processImage();
+    };
+
+    thresholdSlider.addEventListener('input', (e) => {
+        thresholdValue.innerText = e.target.value;
+        if(imgElement.src) processImage();
+    });
+
+    function processImage() {
+        if (!cv.Mat) return;
+
+        // قراءة الصورة الأصلية
+        let src = cv.imread(imgElement);
+        let gray = new cv.Mat();
+        let binary = new cv.Mat();
+
+        // تحويلها لرمادي ثم أبيض وأسود عتبة (Binary Threshold)
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+        let threshVal = parseInt(thresholdSlider.value);
+        cv.threshold(gray, binary, threshVal, 255, cv.THRESH_BINARY_INV);
+
+        let h = binary.rows;
+        let w = binary.cols;
+
+        // قص الأجزاء الأربعة (أبعاد تقريبية للشكل الهيكلي للهاتف)
+        let rectTop = new cv.Rect(Math.floor(w*0.2), 0, Math.floor(w*0.6), Math.floor(h*0.35));
+        let rectBottom = new cv.Rect(Math.floor(w*0.2), Math.floor(h*0.65), Math.floor(w*0.6), Math.floor(h*0.35));
+        let rectLeft = new cv.Rect(0, Math.floor(h*0.2), Math.floor(w*0.35), Math.floor(h*0.6));
+        let rectRight = new cv.Rect(Math.floor(w*0.65), Math.floor(h*0.2), Math.floor(w*0.35), Math.floor(h*0.6));
+
+        let topPart = binary.roi(rectTop);
+        let bottomPart = binary.roi(rectBottom);
+        let leftPart = binary.roi(rectLeft);
+        let rightPart = binary.roi(rectRight);
+
+        // تدوير الأجزاء المفرودة
+        let topRotated = new cv.Mat();
+        let leftRotated = new cv.Mat();
+        let rightRotated = new cv.Mat();
+
+        cv.rotate(topPart, topRotated, cv.ROTATE_180);
+        cv.rotate(leftPart, leftRotated, cv.ROTATE_90_COUNTERCLOCKWISE);
+        cv.rotate(rightPart, rightRotated, cv.ROTATE_90_CLOCKWISE);
+
+        // إنشاء لوحة الخلفية الكبيرة (Canvas) بيضاء اللون
+        let canvasW = Math.floor(w * 1.5);
+        let canvasH = Math.floor(h * 1.5);
+        let canvasMat = new cv.Mat(canvasH, canvasW, cv.CV_8UC1, new cv.Scalar(255));
+
+        let centerX = Math.floor(canvasW / 2);
+        let centerY = Math.floor(canvasH / 2);
+        let rectW = Math.floor(w * 0.5);
+        let rectH = Math.floor(h * 0.5);
+
+        // رسم مربع المركز (أرضية الصندوق) بالرمادي الفاتح
+        let p1 = new cv.Point(centerX - Math.floor(rectW/2), centerY - Math.floor(rectH/2));
+        let p2 = new cv.Point(centerX + Math.floor(rectW/2), centerY + Math.floor(rectH/2));
+        cv.rectangle(canvasMat, p1, p2, new cv.Scalar(220), -1);
+
+        // دمج الأجزاء المدورة في أماكنها حول الصندوق
+        try {
+            // الجزء العلوي
+            let dstTop = canvasMat.roi(new cv.Rect(centerX - Math.floor(topRotated.cols/2), p1.y - topRotated.rows, topRotated.cols, topRotated.rows));
+            topRotated.copyTo(dstTop);
+            
+            // الجزء السفلي
+            let dstBottom = canvasMat.roi(new cv.Rect(centerX - Math.floor(bottomPart.cols/2), p2.y, bottomPart.cols, bottomPart.rows));
+            bottomPart.copyTo(dstBottom);
+
+            // الجزء الأيسر
+            let dstLeft = canvasMat.roi(new cv.Rect(p1.x - leftRotated.cols, centerY - Math.floor(leftRotated.rows/2), leftRotated.cols, leftRotated.rows));
+            leftRotated.copyTo(dstLeft);
+
+            // الجزء الأيمن
+            let dstRight = canvasMat.roi(new cv.Rect(p2.x, centerY - Math.floor(rightRotated.rows/2), rightRotated.cols, rightRotated.rows));
+            rightRotated.copyTo(dstRight);
+        } catch(e) {
+            console.log("خطأ بسيط في الأبعاد أستُثنيت معالجته");
+        }
+
+        // عرض النتيجة على الـ Canvas الخاص بـ HTML
+        cv.imshow('canvasOutput', canvasMat);
+
+        // إظهار زر التحميل
+        downloadBtn.style.display = 'inline-block';
+
+        // تنظيف الذاكرة
+        src.delete(); gray.delete(); binary.delete(); topPart.delete(); bottomPart.delete();
+        leftPart.delete(); rightPart.delete(); topRotated.delete(); leftRotated.delete();
+        rightRotated.delete(); canvasMat.delete();
+    }
+
+    // تفعيل خاصية تحميل الصورة الناتجة عند الضغط على الزر
+    downloadBtn.addEventListener('click', () => {
+        let canvas = document.getElementById('canvasOutput');
+        let imageURL = canvas.toDataURL("image/png");
+        let link = document.createElement('a');
+        link.download = 'shadow_box_layout.png';
+        link.href = imageURL;
+        link.click();
+    });
+</script>
+
+</body>
+</html>

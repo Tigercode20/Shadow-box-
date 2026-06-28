@@ -3,101 +3,351 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎨 مولد صناديق الظلال - Shadow Box</title>
+    <title>🎨 مولد صناديق الظلال المطور | Perspective Shadow Box Generator</title>
     <style>
+        :root {
+            --primary-color: #3b82f6;
+            --bg-color: #f3f4f6;
+            --text-color: #1f2937;
+            --panel-bg: #ffffff;
+            --border-radius: 12px;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
             margin: 0;
             padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 900px;
+            background: var(--panel-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        }
+
+        .header {
             text-align: center;
+            margin-bottom: 30px;
         }
-        .container {
-            max-width: 800px;
-            background: white;
-            margin: 0 auto;
+
+        .header h1 {
+            font-size: 2.2rem;
+            margin: 0 0 10px;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 1.1rem;
+        }
+
+        .input-panel {
+            background: #f9fafb;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: var(--border-radius);
+            margin-bottom: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            align-items: center;
         }
-        h1 { color: #333; }
-        .controls {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-        }
-        input[type="file"] { margin: 10px; }
-        .slider-container { margin: 15px 0; }
-        slider { width: 80%; }
-        canvas {
-            max-width: 100%;
-            margin-top: 20px;
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            background: #fff;
-        }
-        .btn {
-            background-color: #0070f3;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 16px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 15px;
-            text-decoration: none;
+
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
             display: inline-block;
         }
-        .btn:hover { background-color: #0051cb; }
-        #status { color: red; font-weight: bold; margin: 10px; }
+
+        .btn-upload {
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            background-color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-upload-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-group label {
+            font-weight: 500;
+        }
+
+        .slider-control {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: #e5e7eb;
+            outline: none;
+            border-radius: 3px;
+        }
+
+        .slider-control::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .output-panel {
+            text-align: center;
+        }
+
+        .output-panel h3 {
+            margin-bottom: 20px;
+        }
+
+        #canvasOutput {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #fff;
+            margin-bottom: 20px;
+        }
+
+        .btn-download {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading-status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            z-index: 1000;
+        }
     </style>
-    <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+    <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();"></script>
 </head>
 <body>
 
-<div class="container">
-    <h1>🎨 مـولد صـناديق الظلال (Shadow Box)</h1>
-    <p>ارفع صورتك لتحويلها فوراً إلى تصميم صندوق مفرود للقص</p>
-    
-    <div id="status">جاري تحميل محرك معالجة الصور (OpenCV)... برجاء الانتظار</div>
+    <div id="loadingStatus" class="loading-status">
+        🔄 جاري تحميل محرك المعالجة البصرية (OpenCV)...
+    </div>
 
-    <div class="controls">
-        <input type="file" id="fileInput" accept="image/*" disabled><br>
-        <div class="slider-container">
-            <label for="thresholdSlider">درجة عزل الظلال (Threshold): </label>
-            <input type="range" id="thresholdSlider" min="0" max="255" value="127" disabled>
-            <span id="thresholdValue">127</span>
+    <div class="main-container">
+        <div class="header">
+            <h1>🎨 مولد صناديق الظلال المطور (Perspective)</h1>
+            <p>حوّل صورتك لهيكل صندوق مفرود ومعالج بصرياً للقص!</p>
+        </div>
+
+        <div class="input-panel">
+            <div class="file-upload-wrapper">
+                <button class="btn-upload">📁 اختر صورة...</button>
+                <input type="file" id="fileInput" accept="image/*" disabled>
+            </div>
+
+            <div class="slider-group">
+                <label for="thresholdSlider">
+                    🎚️ درجة عزل الظلال (Threshold): <span id="thresholdValue">115</span>
+                </label>
+                <input type="range" id="thresholdSlider" class="slider-control" min="0" max="255" value="115" disabled>
+            </div>
+        </div>
+
+        <div class="output-panel">
+            <h3>الهيكل النهائي (Perspective Unfolded Layout)</h3>
+            <canvas id="canvasOutput"></canvas>
+            <br>
+            <button class="btn-download" id="downloadBtn" style="display:none;">
+                💾 تحميل التصميم النهائي (PNG)
+            </button>
         </div>
     </div>
 
-    <div>
-        <h3>النتيجة المفرودة (Unfolded Layout):</h3>
-        <canvas id="canvasOutput"></canvas>
-    </div>
-    
-    <button class="btn" id="downloadBtn" style="display:none;">💾 تحميل التصميم الناتج</button>
-</div>
+    <script>
+        let imgElement = new Image();
+        let fileInput = document.getElementById('fileInput');
+        let thresholdSlider = document.getElementById('thresholdSlider');
+        let thresholdValue = document.getElementById('thresholdValue');
+        let downloadBtn = document.getElementById('downloadBtn');
+        let loadingStatus = document.getElementById('loadingStatus');
 
-<script>
-    let imgElement = new Image();
-    let fileInput = document.getElementById('fileInput');
-    let thresholdSlider = document.getElementById('thresholdSlider');
-    let thresholdValue = document.getElementById('thresholdValue');
-    let downloadBtn = document.getElementById('downloadBtn');
-
-    function onOpenCvReady() {
-        document.getElementById('status').style.display = 'none';
-        fileInput.disabled = false;
-        thresholdSlider.disabled = false;
-    }
-
-    fileInput.addEventListener('change', (e) => {
-        if(e.target.files.length > 0) {
-            imgElement.src = URL.createObjectURL(e.target.files[0]);
+        function onOpenCvReady() {
+            loadingStatus.style.display = 'none';
+            fileInput.disabled = false;
+            thresholdSlider.disabled = false;
         }
-    }, false);
 
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                let reader = new FileReader();
+                reader.onload = function(event) {
+                    imgElement.src = event.target.result;
+                }
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        imgElement.onload = function() {
+            processImage();
+        };
+
+        thresholdSlider.addEventListener('input', (e) => {
+            thresholdValue.innerText = e.target.value;
+            if (imgElement.src) processImage();
+        });
+
+        function getPerspectiveTransform(src, srcCoords, dstCoords) {
+            let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, srcCoords);
+            let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, dstCoords);
+            let M = cv.getPerspectiveTransform(srcTri, dstTri);
+            let dst = new cv.Mat();
+            cv.warpPerspective(src, dst, M, new cv.Size(src.cols, src.rows));
+            srcTri.delete(); dstTri.delete(); M.delete();
+            return dst;
+        }
+
+        function processImage() {
+            if (!cv.Mat) return;
+
+            let src = cv.imread(imgElement);
+            let gray = new cv.Mat();
+            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+
+            let binary = new cv.Mat();
+            let threshVal = parseInt(thresholdSlider.value);
+            cv.threshold(gray, binary, threshVal, 255, cv.THRESH_BINARY_INV);
+
+            let h = binary.rows;
+            let w = binary.cols;
+
+            // تحديد مناطق الأطراف قبل التشوه
+            let wRegion = Math.floor(w * 0.4);
+            let hRegion = Math.floor(h * 0.4);
+            let hMid = Math.floor(h * 0.5);
+            let wMid = Math.floor(w * 0.5);
+
+            let rectT = new cv.Rect(Math.floor(w*0.1), 0, Math.floor(w*0.8), hRegion);
+            let rectB = new cv.Rect(Math.floor(w*0.1), h - hRegion, Math.floor(w*0.8), hRegion);
+            let rectL = new cv.Rect(0, Math.floor(h*0.1), wRegion, Math.floor(h*0.8));
+            let rectR = new cv.Rect(w - wRegion, Math.floor(h*0.1), wRegion, Math.floor(h*0.8));
+
+            let topP = binary.roi(rectT);
+            let botP = binary.roi(rectB);
+            let lefP = binary.roi(rectL);
+            let rigP = binary.roi(rectR);
+
+            // تدوير الأجزاء
+            let topR = new cv.Mat(), lefR = new cv.Mat(), rigR = new cv.Mat();
+            cv.rotate(topP, topR, cv.ROTATE_180);
+            cv.rotate(lefP, lefR, cv.ROTATE_90_COUNTERCLOCKWISE);
+            cv.rotate(rigP, rigR, cv.ROTATE_90_CLOCKWISE);
+
+            // تطبيق التشوه البصري (Perspective)
+            // المعامل K يتحكم في درجة الضم والسط
+            let k = 0.25; 
+            
+            // علوي: ضم من الأعلى (نقاط البداية)، سط من الأسفل (نقاط النهاية)
+            let topDef = getPerspectiveTransform(topR, 
+                [0, 0, topR.cols, 0, 0, topR.rows, topR.cols, topR.rows],
+                [topR.cols * k, 0, topR.cols * (1-k), 0, 0, topR.rows, topR.cols, topR.rows]);
+
+            // سفلي: سط من الأعلى، ضم من الأسفل
+            let botDef = getPerspectiveTransform(botP,
+                [0, 0, botP.cols, 0, 0, botP.rows, botP.cols, botP.rows],
+                [0, 0, botP.cols, 0, botP.cols * k, botP.rows, botP.cols * (1-k), botP.rows]);
+
+            // أيسر: ضم من اليسار، سط من اليمين
+            let lefDef = getPerspectiveTransform(lefR,
+                [0, 0, lefR.cols, 0, 0, lefR.rows, lefR.cols, lefR.rows],
+                [0, lefR.rows * k, lefR.cols, 0, 0, lefR.rows * (1-k), lefR.cols, lefR.rows]);
+
+            // أيمن: سط من اليسار، ضم من اليمين
+            let rigDef = getPerspectiveTransform(rigR,
+                [0, 0, rigR.cols, 0, 0, rigR.rows, rigR.cols, rigR.rows],
+                [0, 0, rigR.cols, rigR.rows * k, 0, rigR.rows, rigR.cols, rigR.rows * (1-k)]);
+
+            // إنشاء اللوحة النهائية
+            let cW = Math.floor(w * 2.2), cH = Math.floor(h * 2.2);
+            let finalMat = new cv.Mat(cH, cW, cv.CV_8UC1, new cv.Scalar(255));
+            let midX = Math.floor(cW/2), midY = Math.floor(cH/2);
+
+            // وضع أرضية الصندوق
+            let cRect = new cv.Rect(midX - wMid, midY - hMid, w, h);
+            cv.rectangle(finalMat, {x:cRect.x, y:cRect.y}, {x:cRect.x+w, y:cRect.y+h}, new cv.Scalar(240), -1);
+
+            // دمج الأجزاء المشوهة
+            function paste(mat, x, y) {
+                let dst = finalMat.roi(new cv.Rect(x, y, mat.cols, mat.rows));
+                mat.copyTo(dst); dst.delete();
+            }
+
+            paste(topDef, midX - Math.floor(topDef.cols/2), cRect.y - topDef.rows);
+            paste(botDef, midX - Math.floor(botDef.cols/2), cRect.y + h);
+            paste(lefDef, cRect.x - lefDef.cols, midY - Math.floor(lefDef.rows/2));
+            paste(rigDef, cRect.x + w, midY - Math.floor(rigDef.rows/2));
+
+            cv.imshow('canvasOutput', finalMat);
+            downloadBtn.style.display = 'inline-block';
+
+            src.delete(); gray.delete(); binary.delete();
+            topP.delete(); botP.delete(); lefP.delete(); rigP.delete();
+            topR.delete(); lefR.delete(); rigR.delete();
+            topDef.delete(); botDef.delete(); lefDef.delete(); rigDef.delete();
+            finalMat.delete();
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            let canvas = document.getElementById('canvasOutput');
+            let link = document.createElement('a');
+            link.download = 'jojo-shadow-box-perspective.png';
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        });
+    </script>
+</body>
+</html>
     imgElement.onload = function() {
         processImage();
     };

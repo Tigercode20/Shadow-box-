@@ -1922,10 +1922,53 @@
             vecOutputCanvas.width = w;
             vecOutputCanvas.height = h;
             let outCtx = vecOutputCanvas.getContext('2d');
-            let outImgData = outCtx.createImageData(w, h);
+            
+            // Draw clean white background
+            outCtx.fillStyle = "#ffffff";
+            outCtx.fillRect(0, 0, w, h);
+            
+            // Load processed pixels to OpenCV for contour vector tracing
+            let tempCanvas = document.createElement('canvas');
+            tempCanvas.width = w;
+            tempCanvas.height = h;
+            let tempCtx = tempCanvas.getContext('2d');
+            let outImgData = tempCtx.createImageData(w, h);
             outImgData.data.set(outData);
-            outCtx.putImageData(outImgData, 0, 0);
-
+            tempCtx.putImageData(outImgData, 0, 0);
+            
+            let mat = cv.imread(tempCanvas);
+            let grayMat = new cv.Mat();
+            cv.cvtColor(mat, grayMat, cv.COLOR_RGBA2GRAY);
+            
+            let thresh = new cv.Mat();
+            cv.threshold(grayMat, thresh, 127, 255, cv.THRESH_BINARY_INV);
+            
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(thresh, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+            
+            // Draw smooth anti-aliased vector shapes onto vecOutputCanvas
+            outCtx.fillStyle = "#000000";
+            for (let i = 0; i < contours.size(); i++) {
+                let parent = hierarchy.intPtr(0, i)[3];
+                if (parent === -1) {
+                    drawSingleContour(outCtx, contours.get(i));
+                    outCtx.fill();
+                }
+            }
+            
+            outCtx.fillStyle = "#ffffff";
+            for (let i = 0; i < contours.size(); i++) {
+                let parent = hierarchy.intPtr(0, i)[3];
+                if (parent !== -1) {
+                    drawSingleContour(outCtx, contours.get(i));
+                    outCtx.fill();
+                }
+            }
+            
+            // Clean up
+            mat.delete(); grayMat.delete(); thresh.delete(); contours.delete(); hierarchy.delete();
+            
             updateSwatches(outData, w, h);
 
             vecShowOriginal = false;
@@ -1933,6 +1976,20 @@
             document.getElementById('vec-show-original').classList.remove('active');
 
             vecRenderPreview();
+        }
+
+        function drawSingleContour(ctx, contour) {
+            if (contour.rows === 0) return;
+            ctx.beginPath();
+            let p0_x = contour.data32S[0];
+            let p0_y = contour.data32S[1];
+            ctx.moveTo(p0_x, p0_y);
+            for (let j = 1; j < contour.rows; j++) {
+                let x = contour.data32S[j * 2];
+                let y = contour.data32S[j * 2 + 1];
+                ctx.lineTo(x, y);
+            }
+            ctx.closePath();
         }
 
         function vecRenderPreview() {

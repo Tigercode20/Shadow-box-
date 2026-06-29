@@ -1368,12 +1368,29 @@
                     let X_w_trans = (X_w - offset_x) / scale_factor;
                     let Y_w_trans = (Y_w - offset_y) / scale_factor;
                     
-                    let col_tgt = Math.round((X_w_trans + target_w_mm / 2.0) / target_w_mm * (tgt_w - 1));
-                    let row_tgt = Math.round(((target_h_mm / 2.0) - Y_w_trans) / target_h_mm * (tgt_h - 1));
+                    let col_tgt_frac = (X_w_trans + target_w_mm / 2.0) / target_w_mm * (tgt_w - 1);
+                    let row_tgt_frac = ((target_h_mm / 2.0) - Y_w_trans) / target_h_mm * (tgt_h - 1);
                     
-                    if (col_tgt >= 0 && col_tgt < tgt_w && row_tgt >= 0 && row_tgt < tgt_h) {
-                        let idx = (row_tgt * tgt_w + col_tgt) * 4;
-                        panelData[r * w + c] = tgt_pixels[idx]; 
+                    if (col_tgt_frac >= 0 && col_tgt_frac < tgt_w && row_tgt_frac >= 0 && row_tgt_frac < tgt_h) {
+                        let c1 = Math.floor(col_tgt_frac);
+                        let c2 = Math.min(tgt_w - 1, c1 + 1);
+                        let r1 = Math.floor(row_tgt_frac);
+                        let r2 = Math.min(tgt_h - 1, r1 + 1);
+                        
+                        let dc = col_tgt_frac - c1;
+                        let dr = row_tgt_frac - r1;
+                        
+                        let val11 = tgt_pixels[(r1 * tgt_w + c1) * 4];
+                        let val12 = tgt_pixels[(r1 * tgt_w + c2) * 4];
+                        let val21 = tgt_pixels[(r2 * tgt_w + c1) * 4];
+                        let val22 = tgt_pixels[(r2 * tgt_w + c2) * 4];
+                        
+                        let val = (1 - dc) * (1 - dr) * val11 +
+                                  dc * (1 - dr) * val12 +
+                                  (1 - dc) * dr * val21 +
+                                  dc * dr * val22;
+                                  
+                        panelData[r * w + c] = Math.round(val);
                     }
                 }
             }

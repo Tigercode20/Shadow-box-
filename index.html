@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- JSZip Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <!-- jsPDF Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
             --primary: #00f0ff;
@@ -873,6 +875,17 @@
                             <div class="color-swatches" id="vec-swatches"></div>
                             <div class="vec-info" id="vec-info" style="font-size:0.8rem;">Browse an image to start vectorizing</div>
                         </div>
+
+                        <!-- Download formats bar -->
+                        <div class="download-formats-bar" style="display: flex; gap: 8px; border-top: 1px solid var(--card-border); padding-top: 12px; margin-top: 5px; flex-shrink: 0; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">DOWNLOAD SILHOUETTE:</span>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-secondary vec-dl-btn" data-format="svg" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(245, 158, 11, 0.35); color: var(--accent);"><i class="fa-solid fa-file-code"></i> SVG</button>
+                                <button class="btn btn-secondary vec-dl-btn" data-format="pdf" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(245, 158, 11, 0.35); color: var(--accent);"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-secondary vec-dl-btn" data-format="png" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(245, 158, 11, 0.35); color: var(--accent);"><i class="fa-solid fa-file-image"></i> PNG</button>
+                                <button class="btn btn-secondary vec-dl-btn" data-format="jpg" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(245, 158, 11, 0.35); color: var(--accent);"><i class="fa-solid fa-file-image"></i> JPG</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1057,6 +1070,15 @@
                         <div class="canvas-frame">
                             <canvas id="canvasTargetPreview"></canvas>
                         </div>
+                        <div class="download-formats-bar" style="display: flex; gap: 8px; border-top: 1px solid var(--card-border); padding-top: 12px; margin-top: 5px; flex-shrink: 0; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">DOWNLOAD SILHOUETTE:</span>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-secondary target-dl-btn" data-format="svg" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-code"></i> SVG</button>
+                                <button class="btn btn-secondary target-dl-btn" data-format="pdf" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-secondary target-dl-btn" data-format="png" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-image"></i> PNG</button>
+                                <button class="btn btn-secondary target-dl-btn" data-format="jpg" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-image"></i> JPG</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="preview-card">
@@ -1065,6 +1087,15 @@
                         </div>
                         <div class="canvas-frame">
                             <canvas id="canvasCrossPreview"></canvas>
+                        </div>
+                        <div class="download-formats-bar" style="display: flex; gap: 8px; border-top: 1px solid var(--card-border); padding-top: 12px; margin-top: 5px; flex-shrink: 0; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted);">DOWNLOAD TEMPLATE:</span>
+                            <div style="display: flex; gap: 6px;">
+                                <button class="btn btn-secondary template-dl-btn" data-format="svg" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-code"></i> SVG</button>
+                                <button class="btn btn-secondary template-dl-btn" data-format="pdf" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-pdf"></i> PDF</button>
+                                <button class="btn btn-secondary template-dl-btn" data-format="png" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-image"></i> PNG</button>
+                                <button class="btn btn-secondary template-dl-btn" data-format="jpg" style="padding: 6px 12px; font-size: 0.8rem; font-weight: 700; border-color: rgba(0, 240, 255, 0.35); color: var(--primary);"><i class="fa-solid fa-file-image"></i> JPG</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2003,6 +2034,144 @@
 
             return out;
         }
+
+        // ============================================
+        // MULTI-FORMAT EXPORT MODULE (SVG, PDF, PNG, JPG)
+        // ============================================
+        function downloadCanvasAsImage(canvas, filename, format) {
+            let dataUrl;
+            if (format === 'png') {
+                dataUrl = canvas.toDataURL("image/png");
+            } else {
+                let temp = document.createElement('canvas');
+                temp.width = canvas.width;
+                temp.height = canvas.height;
+                let ctx = temp.getContext('2d');
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, temp.width, temp.height);
+                ctx.drawImage(canvas, 0, 0);
+                dataUrl = temp.toDataURL("image/jpeg", 0.95);
+            }
+            let a = document.createElement('a');
+            a.download = filename + "." + format;
+            a.href = dataUrl;
+            a.click();
+        }
+
+        function downloadCanvasAsPDF(canvas, filename) {
+            const { jsPDF } = window.jspdf;
+            let temp = document.createElement('canvas');
+            temp.width = canvas.width;
+            temp.height = canvas.height;
+            let ctx = temp.getContext('2d');
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, temp.width, temp.height);
+            ctx.drawImage(canvas, 0, 0);
+            let imgData = temp.toDataURL("image/jpeg", 0.9);
+            
+            let isLandscape = canvas.width > canvas.height;
+            let pdf = new jsPDF({
+                orientation: isLandscape ? 'landscape' : 'portrait',
+                unit: 'px',
+                format: [canvas.width, canvas.height]
+            });
+            pdf.addImage(imgData, 'JPEG', 0, 0, canvas.width, canvas.height);
+            pdf.save(filename + ".pdf");
+        }
+
+        function downloadCanvasAsSVG(canvas, filename) {
+            if (typeof cv === 'undefined' || !cv.Mat) {
+                alert("OpenCV is not loaded yet!");
+                return;
+            }
+            
+            let src = cv.imread(canvas);
+            let srcGray = new cv.Mat();
+            cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+            
+            let thresh = new cv.Mat();
+            cv.threshold(srcGray, thresh, 127, 255, cv.THRESH_BINARY_INV);
+            
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(thresh, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+            
+            let width = canvas.width;
+            let height = canvas.height;
+            
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">\n`;
+            svg += `  <rect width="100%" height="100%" fill="white"/>\n`;
+            
+            for (let i = 0; i < contours.size(); i++) {
+                let contour = contours.get(i);
+                let h = hierarchy.intPtr(0, i);
+                let parent = h[3];
+                
+                if (contour.rows > 0) {
+                    let pathData = "";
+                    let p0_x = contour.data32S[0];
+                    let p0_y = contour.data32S[1];
+                    pathData += `M ${p0_x} ${p0_y}`;
+                    for (let j = 1; j < contour.rows; j++) {
+                        let x = contour.data32S[j * 2];
+                        let y = contour.data32S[j * 2 + 1];
+                        pathData += ` L ${x} ${y}`;
+                    }
+                    pathData += " Z";
+                    
+                    let fill = (parent === -1) ? "black" : "white";
+                    svg += `  <path d="${pathData}" fill="${fill}" stroke="none"/>\n`;
+                }
+            }
+            
+            svg += "</svg>";
+            
+            src.delete(); srcGray.delete(); thresh.delete(); contours.delete(); hierarchy.delete();
+            
+            let blob = new Blob([svg], {type: "image/svg+xml;charset=utf-8"});
+            let link = document.createElement('a');
+            link.download = filename + ".svg";
+            link.href = URL.createObjectURL(blob);
+            link.click();
+        }
+
+        // Bind click event listeners
+        document.addEventListener('click', function(e) {
+            let vecBtn = e.target.closest('.vec-dl-btn');
+            if (vecBtn) {
+                let canvas = document.getElementById('vecPreviewCanvas');
+                let format = vecBtn.dataset.format;
+                if (!vecOutputCanvas) {
+                    alert("Please process an image first!");
+                    return;
+                }
+                if (format === 'svg') downloadCanvasAsSVG(canvas, "vector_silhouette");
+                else if (format === 'pdf') downloadCanvasAsPDF(canvas, "vector_silhouette");
+                else downloadCanvasAsImage(canvas, "vector_silhouette", format);
+            }
+
+            let targetBtn = e.target.closest('.target-dl-btn');
+            if (targetBtn) {
+                let canvas = document.getElementById('canvasTargetPreview');
+                let format = targetBtn.dataset.format;
+                if (format === 'svg') downloadCanvasAsSVG(canvas, "preprocessed_silhouette");
+                else if (format === 'pdf') downloadCanvasAsPDF(canvas, "preprocessed_silhouette");
+                else downloadCanvasAsImage(canvas, "preprocessed_silhouette", format);
+            }
+
+            let templateBtn = e.target.closest('.template-dl-btn');
+            if (templateBtn) {
+                let canvas = document.getElementById('canvasCrossPreview');
+                let format = templateBtn.dataset.format;
+                if (!crossLayout) {
+                    alert("Please generate a preview first!");
+                    return;
+                }
+                if (format === 'svg') downloadCanvasAsSVG(canvas, "unfolded_lamp_template");
+                else if (format === 'pdf') downloadCanvasAsPDF(canvas, "unfolded_lamp_template");
+                else downloadCanvasAsImage(canvas, "unfolded_lamp_template", format);
+            }
+        });
     </script>
 </body>
 </html>

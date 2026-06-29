@@ -1633,12 +1633,25 @@
             
             let preprocessedMat = preprocessSilhouette(srcGray, target_w, target_h, use_edges, thresh1, thresh2, use_custom_shape, ground_bottom);
             
-            let canvasTarget = document.getElementById('canvasTargetPreview');
-            cv.imshow(canvasTarget, preprocessedMat);
+            // Find contours of the preprocessed silhouette matrix
+            let thresh = new cv.Mat();
+            cv.threshold(preprocessedMat, thresh, 127, 255, cv.THRESH_BINARY_INV);
             
-            let tempCanvas = document.createElement('canvas');
-            cv.imshow(tempCanvas, preprocessedMat);
-            let targetImgData = tempCanvas.getContext('2d').getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(thresh, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+            
+            // Render perfectly smooth vector shape onto canvasTargetPreview
+            let canvasTarget = document.getElementById('canvasTargetPreview');
+            canvasTarget.width = preprocessedMat.cols;
+            canvasTarget.height = preprocessedMat.rows;
+            drawContoursToCanvas(canvasTarget, contours, hierarchy);
+            
+            // Generate clean anti-aliased image data from the smooth target canvas for projection
+            let targetImgData = canvasTarget.getContext('2d').getImageData(0, 0, canvasTarget.width, canvasTarget.height);
+            
+            // Clean up OpenCV mats
+            thresh.delete(); contours.delete(); hierarchy.delete();
             
             wallLeft = projectWallPanel('left', targetImgData, target_w, target_h, box_w, box_h, box_d, 
                                         front_z, front_z + box_d, light_z, res, panel_bg, img_scale, offset_x, offset_y);
@@ -1948,23 +1961,7 @@
             cv.findContours(thresh, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
             
             // Draw smooth anti-aliased vector shapes onto vecOutputCanvas
-            outCtx.fillStyle = "#000000";
-            for (let i = 0; i < contours.size(); i++) {
-                let parent = hierarchy.intPtr(0, i)[3];
-                if (parent === -1) {
-                    drawSingleContour(outCtx, contours.get(i));
-                    outCtx.fill();
-                }
-            }
-            
-            outCtx.fillStyle = "#ffffff";
-            for (let i = 0; i < contours.size(); i++) {
-                let parent = hierarchy.intPtr(0, i)[3];
-                if (parent !== -1) {
-                    drawSingleContour(outCtx, contours.get(i));
-                    outCtx.fill();
-                }
-            }
+            drawContoursToCanvas(vecOutputCanvas, contours, hierarchy);
             
             // Clean up
             mat.delete(); grayMat.delete(); thresh.delete(); contours.delete(); hierarchy.delete();
@@ -1990,6 +1987,33 @@
                 ctx.lineTo(x, y);
             }
             ctx.closePath();
+        }
+
+        function drawContoursToCanvas(canvas, contours, hierarchy) {
+            let ctx = canvas.getContext('2d');
+            let w = canvas.width;
+            let h = canvas.height;
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            
+            ctx.fillStyle = "#000000";
+            for (let i = 0; i < contours.size(); i++) {
+                let parent = hierarchy.intPtr(0, i)[3];
+                if (parent === -1) {
+                    drawSingleContour(ctx, contours.get(i));
+                    ctx.fill();
+                }
+            }
+            
+            ctx.fillStyle = "#ffffff";
+            for (let i = 0; i < contours.size(); i++) {
+                let parent = hierarchy.intPtr(0, i)[3];
+                if (parent !== -1) {
+                    drawSingleContour(ctx, contours.get(i));
+                    ctx.fill();
+                }
+            }
         }
 
         function vecRenderPreview() {

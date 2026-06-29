@@ -664,6 +664,12 @@
                 overflow: visible;
             }
 
+            .workspace-panel {
+                flex-direction: column;
+                height: auto;
+                width: 100%;
+            }
+
             /* Controls move to the bottom */
             .sidebar {
                 width: 100%;
@@ -793,8 +799,8 @@
                                 <span class="slider-val" id="val_vec_contrast">100%</span>
                             </div>
                             <button class="step-btn" onclick="adjustSlider('vec_contrast', 10)">+</button>
-                        </div>
                     </div>
+                    <button class="btn btn-secondary" id="btn-vec-auto" style="font-size: 0.85rem; padding: 12px; margin-top: 10px; border-color: rgba(245, 158, 11, 0.3); color: var(--accent);"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Adjust Parameters</button>
                 </div>
 
                 <!-- Sticky bottom buttons for Vectorizer -->
@@ -1756,7 +1762,35 @@
                 // Switch Tab to Step 2
                 document.querySelector('.tab-btn[data-tab="maker"]').click();
             });
+            document.getElementById('btn-vec-auto').addEventListener('click', vecAutoAdjust);
         })();
+
+        function vecAutoAdjust() {
+            if (!vecOriginalCanvas || typeof cv === 'undefined' || !cv.Mat) {
+                alert("Please upload a photo first!");
+                return;
+            }
+            
+            let src = cv.imread(vecOriginalCanvas);
+            let srcGray = new cv.Mat();
+            cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+            let dst = new cv.Mat();
+            
+            // Otsu's threshold automatically calculates the optimal threshold value
+            let otsuThresh = cv.threshold(srcGray, dst, 0, 255, cv.THRESH_BINARY | cv.THRESH_OTSU);
+            
+            let thresholdVal = Math.round(otsuThresh);
+            document.getElementById('vec_threshold').value = thresholdVal;
+            document.getElementById('val_vec_threshold').innerText = thresholdVal;
+            
+            // Balanced default contrast
+            document.getElementById('vec_contrast').value = 100;
+            document.getElementById('val_vec_contrast').innerText = "100%";
+            
+            src.delete(); srcGray.delete(); dst.delete();
+            
+            vecProcess();
+        }
 
         function vecProcess() {
             if (!vecOriginalCanvas) return;

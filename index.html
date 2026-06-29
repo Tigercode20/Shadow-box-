@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📐 Premium 3D Shadow Box Maker</title>
+    <title>📐 Premium 3D Shadow Box Maker & Vectorizer</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
@@ -13,13 +13,17 @@
     <style>
         :root {
             --primary: #00f0ff;
-            --primary-glow: rgba(0, 240, 255, 0.3);
-            --primary-dark: #0088cc;
-            --bg-radial: radial-gradient(circle at 50% 50%, #171721, #0a0a0f);
-            --card-bg: rgba(255, 255, 255, 0.02);
-            --card-border: rgba(255, 255, 255, 0.06);
-            --text-main: #f3f3f7;
-            --text-muted: #88889c;
+            --primary-glow: rgba(0, 240, 255, 0.35);
+            --primary-dark: #00a8b5;
+            --accent: #f59e0b;
+            --accent-glow: rgba(245, 158, 11, 0.3);
+            --bg-dark: #09090d;
+            --bg-radial: radial-gradient(circle at 50% 50%, #15151f, #09090d);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.07);
+            --text-main: #f1f1f6;
+            --text-muted: #8e8eaf;
+            --sidebar-width: 460px;
         }
 
         * {
@@ -38,29 +42,36 @@
             overflow: hidden;
         }
 
-        /* App Top Header Bar */
+        /* Top Header Navigation */
         .app-header {
-            height: 60px;
-            background: rgba(10, 10, 15, 0.8);
+            height: 65px;
+            background: rgba(10, 10, 15, 0.85);
             border-bottom: 1px solid var(--card-border);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0 20px;
-            backdrop-filter: blur(10px);
+            padding: 0 24px;
+            backdrop-filter: blur(20px);
             z-index: 101;
+            flex-shrink: 0;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .header-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
             font-weight: 700;
-            font-size: 1.15rem;
+            font-size: 1.25rem;
             letter-spacing: 0.5px;
             background: linear-gradient(135deg, #ffffff, var(--primary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .header-title i {
@@ -68,37 +79,55 @@
             -webkit-text-fill-color: initial;
         }
 
-        .badge {
-            background: rgba(0, 240, 255, 0.1);
-            border: 1px solid rgba(0, 240, 255, 0.2);
-            color: var(--primary);
-            padding: 4px 8px;
-            border-radius: 20px;
-            font-size: 0.7rem;
+        /* Mode Switcher Tabs */
+        .tab-nav {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.85rem;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
         }
 
-        .badge-dot {
-            width: 6px;
-            height: 6px;
+        .tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .tab-btn.active[data-tab="vectorizer"] {
+            background: var(--accent);
+            color: #09090d;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .tab-btn.active[data-tab="maker"] {
             background: var(--primary);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--primary);
+            color: #09090d;
+            box-shadow: 0 0 15px var(--primary-glow);
         }
 
-        /* Loading Screen overlay */
+        /* Loading Screen */
         #loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: #0a0a0f;
+            background: #09090d;
             z-index: 9999;
             display: flex;
             flex-direction: column;
@@ -123,14 +152,7 @@
             100% { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            font-size: 1.05rem;
-            font-weight: 600;
-            letter-spacing: 1px;
-            color: var(--text-main);
-        }
-
-        /* App Body Layout */
+        /* App Main Split Workspace */
         .app-body {
             flex: 1;
             display: flex;
@@ -138,20 +160,34 @@
             position: relative;
         }
 
-        .sidebar {
-            width: 380px;
+        /* Main Workspace Panels */
+        .workspace-panel {
+            display: none;
+            width: 100%;
             height: 100%;
-            overflow-y: auto;
-            background: rgba(12, 12, 16, 0.95);
-            border-right: 1px solid var(--card-border);
-            padding: 20px;
-            padding-bottom: 100px; /* Space for floating buttons */
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
         }
 
-        .main-content {
+        .workspace-panel.active {
+            display: flex;
+        }
+
+        /* Sidebar Control Center */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100%;
+            overflow-y: auto;
+            background: rgba(11, 11, 16, 0.96);
+            border-right: 1px solid var(--card-border);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-shrink: 0;
+            padding-bottom: 100px;
+        }
+
+        /* Main Preview Canvas Area */
+        .canvas-area {
             flex: 1;
             height: 100%;
             overflow-y: auto;
@@ -159,28 +195,55 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 30px;
+            justify-content: center;
+            gap: 25px;
         }
 
-        /* Premium CSS Accordions */
+        /* Cards and Sections */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 10px;
+            margin-bottom: 4px;
+        }
+
+        .card-title i {
+            font-size: 1.1rem;
+        }
+
+        /* Advanced Options Collapsible Accordion */
         details {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
             transition: all 0.3s ease;
         }
 
         details[open] {
-            border-color: rgba(0, 240, 255, 0.2);
-            background: rgba(255, 255, 255, 0.03);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            border-color: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.04);
         }
 
         summary {
-            padding: 14px 18px;
+            padding: 16px 20px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             cursor: pointer;
             color: var(--text-main);
             display: flex;
@@ -190,17 +253,12 @@
             user-select: none;
         }
 
-        summary::-webkit-details-marker {
-            display: none;
-        }
-
         summary::after {
             content: '\f107';
             font-family: 'Font Awesome 6 Free';
             font-weight: 900;
             transition: transform 0.3s ease;
             color: var(--text-muted);
-            font-size: 0.95rem;
         }
 
         details[open] summary::after {
@@ -209,25 +267,25 @@
         }
 
         .details-content {
-            padding: 18px;
+            padding: 20px;
             border-top: 1px solid var(--card-border);
-            background: rgba(0, 0, 0, 0.15);
+            background: rgba(0, 0, 0, 0.2);
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 18px;
         }
 
-        /* Inputs & Forms */
+        /* Large Touch Inputs & Grid */
         .form-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 16px;
         }
 
         .input-group {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 8px;
         }
 
         .input-group.full-width {
@@ -235,20 +293,20 @@
         }
 
         label {
-            font-size: 0.7rem;
+            font-size: 0.75rem;
             font-weight: 600;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.75px;
         }
 
         input[type="number"] {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--card-border);
-            border-radius: 8px;
+            border-radius: 10px;
             color: var(--text-main);
-            padding: 10px 14px;
-            font-size: 0.9rem;
+            padding: 12px 16px;
+            font-size: 0.95rem;
             outline: none;
             transition: all 0.3s ease;
             width: 100%;
@@ -256,203 +314,345 @@
 
         input[type="number"]:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
         }
 
-        /* Sliders */
+        /* Premium Sliders with Tap Steps (- / +) */
+        .slider-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .step-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            color: var(--text-main);
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .step-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .step-btn:active {
+            transform: scale(0.9);
+        }
+
         .slider-wrapper {
+            flex: 1;
             display: flex;
             align-items: center;
             gap: 12px;
-            width: 100%;
         }
 
         .slider-wrapper input[type="range"] {
             flex: 1;
             accent-color: var(--primary);
-            height: 5px;
-            border-radius: 5px;
-            outline: none;
+            height: 6px;
+            border-radius: 6px;
             background: rgba(255, 255, 255, 0.1);
+            outline: none;
+            cursor: pointer;
         }
 
         .slider-val {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-weight: 600;
             color: var(--primary);
-            width: 50px;
+            width: 55px;
             text-align: right;
         }
 
-        /* Custom File Upload Button */
+        /* Large File Uploader Card */
         .file-upload-btn {
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            background: rgba(0, 240, 255, 0.04);
-            border: 1px dashed rgba(0, 240, 255, 0.3);
-            border-radius: 10px;
-            padding: 16px;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 16px;
+            padding: 30px 20px;
             cursor: pointer;
             transition: all 0.3s ease;
             text-align: center;
         }
 
         .file-upload-btn:hover {
-            background: rgba(0, 240, 255, 0.08);
+            background: rgba(0, 240, 255, 0.03);
             border-color: var(--primary);
         }
 
         .file-upload-btn i {
-            font-size: 1.3rem;
+            font-size: 2rem;
             color: var(--primary);
+            filter: drop-shadow(0 0 10px var(--primary-glow));
         }
 
         .file-upload-btn span {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-weight: 500;
         }
 
-        /* Checkboxes & Radios */
+        .file-upload-btn.accent-upload i {
+            color: var(--accent);
+            filter: drop-shadow(0 0 10px var(--accent-glow));
+        }
+
+        .file-upload-btn.accent-upload:hover {
+            background: rgba(245, 158, 11, 0.03);
+            border-color: var(--accent);
+        }
+
+        /* Swatches and Quantizer Presets */
+        .palette-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .palette-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .palette-btn.active {
+            border-color: var(--accent);
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent);
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .color-swatches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .color-swatch:hover {
+            transform: translateY(-4px) scale(1.1);
+        }
+
+        /* Toggle Button Bar */
+        .toggle-btn-bar {
+            display: flex;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            overflow: hidden;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .toggle-btn-bar button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn-bar button.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+        }
+
+        /* Layout Selection Checkboxes & Radios */
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             cursor: pointer;
             user-select: none;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
         }
 
         .checkbox-group input[type="checkbox"] {
             accent-color: var(--primary);
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             cursor: pointer;
         }
 
         .radio-option {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             cursor: pointer;
-            margin: 4px 0;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             user-select: none;
+            padding: 6px 0;
         }
 
         .radio-option input[type="radio"] {
             accent-color: var(--primary);
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
             cursor: pointer;
         }
 
-        /* Floating / Fixed Action Bar */
-        .action-bar-fixed {
+        /* Sticky Action Footer */
+        .sticky-footer {
             position: fixed;
             bottom: 0;
             left: 0;
-            width: 380px;
-            background: rgba(10, 10, 14, 0.95);
+            width: var(--sidebar-width);
+            background: rgba(10, 10, 15, 0.95);
             border-top: 1px solid var(--card-border);
-            padding: 15px 20px;
+            padding: 18px 24px;
             display: flex;
             gap: 12px;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             z-index: 100;
         }
 
+        /* Action Buttons */
         .btn {
             flex: 1;
-            background: linear-gradient(135deg, #00f0ff, #0072ff);
+            background: linear-gradient(135deg, var(--primary), #0072ff);
             color: #050508;
             border: none;
-            border-radius: 10px;
-            padding: 13px;
-            font-size: 0.9rem;
+            border-radius: 12px;
+            padding: 14px 20px;
+            font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.15);
+            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.35);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.4);
         }
 
         .btn.btn-secondary {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.05);
             color: var(--text-main);
             border: 1px solid var(--card-border);
             box-shadow: none;
         }
 
         .btn.btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Preview Area */
-        .previews-container {
+        .btn.btn-accent {
+            background: linear-gradient(135deg, var(--accent), #d97706);
+            color: #09090d;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn.btn-accent:hover {
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+        }
+
+        /* Large Preview Card Grid */
+        .grid-workspace {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 25px;
+            gap: 30px;
             width: 100%;
-            max-width: 1200px;
+            height: 100%;
+            max-width: 1400px;
         }
 
-        .preview-box {
+        .preview-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 20px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 15px;
+            gap: 16px;
+            height: 100%;
+            min-height: 0;
             backdrop-filter: blur(10px);
         }
 
-        .preview-title {
-            font-size: 0.95rem;
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .preview-header-title {
+            font-size: 1rem;
             font-weight: 600;
             color: var(--text-main);
             display: flex;
             align-items: center;
-            gap: 8px;
-            align-self: flex-start;
+            gap: 10px;
         }
 
-        .preview-title i {
+        .preview-header-title i {
             color: var(--primary);
         }
 
-        .canvas-container {
+        .preview-header-title.accent-title i {
+            color: var(--accent);
+        }
+
+        .canvas-frame {
+            flex: 1;
             width: 100%;
-            aspect-ratio: 1;
+            background: #0d0d12;
+            border-radius: 14px;
+            border: 1px solid var(--card-border);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #0f0f14;
-            border-radius: 12px;
-            border: 1px solid var(--card-border);
             overflow: hidden;
+            min-height: 0;
         }
 
-        canvas {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-
-        /* Mobile Responsive Viewport Overrides */
-        @media (max-width: 900px) {
+        /* Responsive Breakpoints */
+        @media (max-width: 1024px) {
             body {
                 height: auto;
                 overflow-y: auto;
@@ -464,161 +664,73 @@
                 overflow: visible;
             }
 
-            /* Previews stack at the top */
-            .main-content {
-                width: 100%;
-                height: auto;
-                order: 1;
-                padding: 15px;
-                gap: 15px;
-                overflow: visible;
-            }
-
-            .previews-container {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-
-            .preview-box {
-                padding: 15px;
-                border-radius: 12px;
-            }
-
-            /* Controls stack at the bottom */
+            /* Controls move to the bottom */
             .sidebar {
                 width: 100%;
                 height: auto;
                 order: 2;
                 border-right: none;
                 border-top: 1px solid var(--card-border);
-                padding: 15px;
-                padding-bottom: 90px; /* Leave space for sticky bottom bar */
+                padding: 20px;
+                padding-bottom: 100px;
                 overflow: visible;
             }
 
-            /* Sticky bottom action buttons for mobile */
-            .action-bar-fixed {
+            /* Preview panel moves to the top */
+            .canvas-area {
+                width: 100%;
+                height: auto;
+                order: 1;
+                padding: 20px 15px;
+                overflow: visible;
+            }
+
+            .grid-workspace {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                height: auto;
+            }
+
+            .preview-card {
+                height: auto;
+                aspect-ratio: 1;
+            }
+
+            /* Sticky Footer spans full width on mobile */
+            .sticky-footer {
                 position: fixed;
                 bottom: 0;
                 left: 0;
                 width: 100%;
+                padding: 14px 20px;
+                box-shadow: 0 -5px 25px rgba(0,0,0,0.7);
                 border-top: 1px solid var(--card-border);
-                background: rgba(10, 10, 15, 0.98);
-                box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
-                padding: 12px 15px;
-                backdrop-filter: blur(15px);
+                background: rgba(9, 9, 13, 0.98);
             }
-        }
-
-        /* Vectorizer Styles */
-        .palette-presets {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .palette-btn {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            border: 2px solid var(--card-border);
-            background: rgba(255,255,255, 0.05);
-            color: var(--text-main);
-            font-size: 0.75rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .palette-btn:hover {
-            border-color: var(--primary);
-            background: rgba(0, 240, 255, 0.1);
-        }
-
-        .palette-btn.active {
-            border-color: var(--primary);
-            background: rgba(0, 240, 255, 0.2);
-            box-shadow: 0 0 10px var(--primary-glow);
-            color: var(--primary);
-        }
-
-        .vec-preview-wrapper {
-            position: relative;
-            width: 100%;
-            border-radius: 10px;
-            overflow: hidden;
-            border: 1px solid var(--card-border);
-            background: #0f0f14;
-        }
-
-        .vec-preview-wrapper canvas {
-            width: 100%;
-            display: block;
-        }
-
-        .vec-toggle-bar {
-            display: flex;
-            gap: 0;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--card-border);
-        }
-
-        .vec-toggle-bar button {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            background: rgba(255,255,255,0.03);
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .vec-toggle-bar button.active {
-            background: rgba(0, 240, 255, 0.1);
-            color: var(--primary);
-        }
-
-        .color-swatches {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-
-        .color-swatch {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            border: 2px solid rgba(255,255,255,0.15);
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .color-swatch:hover {
-            transform: scale(1.15);
-            border-color: var(--primary);
-        }
-
-        .vec-info {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-align: center;
         }
     </style>
 </head>
 <body>
 
-    <!-- App Top Bar -->
+    <!-- App Top Navbar -->
     <div class="app-header">
-        <div class="header-title"><i class="fa-solid fa-cube"></i> Shadow Box Maker</div>
+        <div class="header-left">
+            <div class="header-title"><i class="fa-solid fa-cube"></i> Shadow Box Pro</div>
+        </div>
+        
+        <!-- Workflow tab navigator -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="vectorizer">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Step 1: Vectorizer
+            </button>
+            <button class="tab-btn" data-tab="maker">
+                <i class="fa-solid fa-box"></i> Step 2: Unfold Lamp
+            </button>
+        </div>
+
         <div class="badge">
             <div class="badge-dot"></div>
-            <span>OpenCV Ready</span>
+            <span>GPU Engine Online</span>
         </div>
     </div>
 
@@ -629,242 +741,289 @@
         <div style="font-size:0.8rem; color:var(--text-muted); margin-top:10px;">Please wait while the computer graphics library initializes.</div>
     </div>
 
+    <!-- Application Body containing Panels -->
     <div class="app-body">
-        <!-- Sidebar controls -->
-        <div class="sidebar">
 
-            <!-- Step 0: Vectorizer (Optional) -->
-            <details id="vec-section">
-                <summary><i class="fa-solid fa-wand-magic-sparkles" style="color:#f59e0b; margin-right:8px;"></i> 0. Vectorizer <span style="font-size:0.7rem; color:var(--text-muted); margin-left:6px;">(Optional)</span></summary>
-                <div class="details-content">
+        <!-- STEP 1: VECTORIZER WORKSPACE -->
+        <div class="workspace-panel active" id="panel-vectorizer">
+            <div class="sidebar">
+                <!-- Image Uploader -->
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-photo-film" style="color:var(--accent);"></i> Upload Original Photo</div>
                     <div class="input-group">
-                        <label class="file-upload-btn" for="vecFileInput">
-                            <i class="fa-solid fa-photo-film" style="color:#f59e0b;"></i>
-                            <span id="vec-upload-label">Upload Photo to Vectorize</span>
+                        <label class="file-upload-btn accent-upload" for="vecFileInput">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span id="vec-upload-label">Browse Image File</span>
                         </label>
                         <input type="file" id="vecFileInput" accept="image/*" style="display: none;">
                     </div>
+                </div>
 
+                <!-- Color presets -->
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-palette" style="color:var(--accent);"></i> Color Preset Quantization</div>
                     <div class="input-group">
-                        <label>Palette Presets (Number of Colors)</label>
-                        <div class="palette-presets" id="palette-presets">
-                        </div>
+                        <label>Target Number of Colors</label>
+                        <div class="palette-presets" id="palette-presets"></div>
                     </div>
+                </div>
 
+                <!-- Adjustment sliders -->
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-sliders" style="color:var(--accent);"></i> Vectorizer Adjustments</div>
+                    
                     <div class="input-group">
                         <label>Threshold / Brightness</label>
-                        <div class="slider-wrapper">
-                            <input type="range" id="vec_threshold" min="0" max="255" value="128">
-                            <span class="slider-val" id="val_vec_threshold">128</span>
+                        <div class="slider-control">
+                            <button class="step-btn" onclick="adjustSlider('vec_threshold', -10)">-</button>
+                            <div class="slider-wrapper">
+                                <input type="range" id="vec_threshold" min="0" max="255" value="128">
+                                <span class="slider-val" id="val_vec_threshold">128</span>
+                            </div>
+                            <button class="step-btn" onclick="adjustSlider('vec_threshold', 10)">+</button>
                         </div>
                     </div>
 
                     <div class="input-group">
                         <label>Contrast Boost</label>
-                        <div class="slider-wrapper">
-                            <input type="range" id="vec_contrast" min="0" max="300" value="100">
-                            <span class="slider-val" id="val_vec_contrast">100%</span>
+                        <div class="slider-control">
+                            <button class="step-btn" onclick="adjustSlider('vec_contrast', -10)">-</button>
+                            <div class="slider-wrapper">
+                                <input type="range" id="vec_contrast" min="0" max="300" value="100">
+                                <span class="slider-val" id="val_vec_contrast">100%</span>
+                            </div>
+                            <button class="step-btn" onclick="adjustSlider('vec_contrast', 10)">+</button>
                         </div>
                     </div>
+                </div>
 
-                    <div class="vec-toggle-bar">
-                        <button id="vec-show-original" class="active">Original</button>
-                        <button id="vec-show-output">Output</button>
-                    </div>
-
-                    <div class="vec-preview-wrapper">
-                        <canvas id="vecPreviewCanvas" width="300" height="300"></canvas>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Detected Palette</label>
-                        <div class="color-swatches" id="vec-swatches"></div>
-                    </div>
-
-                    <div class="vec-info" id="vec-info">Upload an image to begin</div>
-
-                    <button class="btn" id="btn-vec-use" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
-                        <i class="fa-solid fa-arrow-right"></i> Use as Silhouette Input
+                <!-- Sticky bottom buttons for Vectorizer -->
+                <div class="sticky-footer">
+                    <button class="btn btn-accent" id="btn-vec-use" style="width: 100%;">
+                        <i class="fa-solid fa-arrow-right"></i> Use Silhouette & Go to Step 2
                     </button>
                 </div>
-            </details>
+            </div>
 
-            <!-- Tab 1: Input & Adjustment -->
-            <details open>
-                <summary><i class="fa-solid fa-image" style="color:var(--primary); margin-right:8px;"></i> 1. Silhouette & Fit</summary>
-                <div class="details-content">
+            <!-- Previews for Vectorizer -->
+            <div class="canvas-area">
+                <div class="grid-workspace" style="grid-template-columns: 1fr;">
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <div class="preview-header-title accent-title"><i class="fa-solid fa-palette"></i> Vectorizer Real-time Preview</div>
+                            
+                            <div class="toggle-btn-bar" style="width: 200px;">
+                                <button id="vec-show-original" class="active">Original</button>
+                                <button id="vec-show-output">Processed</button>
+                            </div>
+                        </div>
+
+                        <div class="canvas-frame">
+                            <canvas id="vecPreviewCanvas"></canvas>
+                        </div>
+
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                            <div class="color-swatches" id="vec-swatches"></div>
+                            <div class="vec-info" id="vec-info" style="font-size:0.8rem;">Browse an image to start vectorizing</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- STEP 2: SHADOW LAMP MAKER WORKSPACE -->
+        <div class="workspace-panel" id="panel-maker">
+            <div class="sidebar">
+                
+                <!-- Silhouette scale & shift -->
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-arrows-to-eye" style="color:var(--primary);"></i> Silhouette Placement</div>
+                    
+                    <!-- File loader in case they skip Vectorizer -->
                     <div class="input-group">
                         <label class="file-upload-btn" for="imageFileInput">
                             <i class="fa-solid fa-cloud-arrow-up"></i>
-                            <span id="upload-label">Browse Silhouette Image</span>
+                            <span id="upload-label">Browse Raw Silhouette</span>
                         </label>
                         <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
                     </div>
 
                     <div class="input-group">
                         <label>Scale (%)</label>
-                        <div class="slider-wrapper">
-                            <input type="range" id="img_scale" min="10" max="500" value="150">
-                            <span class="slider-val" id="val_img_scale">150%</span>
+                        <div class="slider-control">
+                            <button class="step-btn" onclick="adjustSlider('img_scale', -10)">-</button>
+                            <div class="slider-wrapper">
+                                <input type="range" id="img_scale" min="10" max="500" value="150">
+                                <span class="slider-val" id="val_img_scale">150%</span>
+                            </div>
+                            <button class="step-btn" onclick="adjustSlider('img_scale', 10)">+</button>
                         </div>
                     </div>
 
                     <div class="input-group">
                         <label>Shift X (mm)</label>
-                        <div class="slider-wrapper">
-                            <input type="range" id="offset_x" min="-500" max="500" value="0">
-                            <span class="slider-val" id="val_offset_x">0</span>
+                        <div class="slider-control">
+                            <button class="step-btn" onclick="adjustSlider('offset_x', -10)">-</button>
+                            <div class="slider-wrapper">
+                                <input type="range" id="offset_x" min="-500" max="500" value="0">
+                                <span class="slider-val" id="val_offset_x">0 mm</span>
+                            </div>
+                            <button class="step-btn" onclick="adjustSlider('offset_x', 10)">+</button>
                         </div>
                     </div>
 
                     <div class="input-group">
                         <label>Shift Y (mm)</label>
-                        <div class="slider-wrapper">
-                            <input type="range" id="offset_y" min="-500" max="500" value="100">
-                            <span class="slider-val" id="val_offset_y">100</span>
+                        <div class="slider-control">
+                            <button class="step-btn" onclick="adjustSlider('offset_y', -10)">-</button>
+                            <div class="slider-wrapper">
+                                <input type="range" id="offset_y" min="-500" max="500" value="100">
+                                <span class="slider-val" id="val_offset_y">100 mm</span>
+                            </div>
+                            <button class="step-btn" onclick="adjustSlider('offset_y', 10)">+</button>
                         </div>
                     </div>
 
-                    <button class="btn btn-secondary" id="btn-autofit" style="font-size: 0.8rem; padding: 10px;"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fit Silhouette</button>
-                </div>
-            </details>
-
-            <!-- Tab 2: Box Dimensions -->
-            <details>
-                <summary><i class="fa-solid fa-ruler-combined" style="color:var(--primary); margin-right:8px;"></i> 2. Box Dimensions (mm)</summary>
-                <div class="details-content">
-                    <div class="form-grid">
-                        <div class="input-group">
-                            <label>Width (X)</label>
-                            <input type="number" id="box_w" value="413.6" step="0.1">
-                        </div>
-                        <div class="input-group">
-                            <label>Height (Y)</label>
-                            <input type="number" id="box_h" value="435.5" step="0.1">
-                        </div>
-                        <div class="input-group full-width">
-                            <label>Depth (Z)</label>
-                            <input type="number" id="box_d" value="200.0" step="0.1">
-                        </div>
-                    </div>
-                </div>
-            </details>
-
-            <!-- Tab 3: Optical Settings -->
-            <details>
-                <summary><i class="fa-solid fa-lightbulb" style="color:var(--primary); margin-right:8px;"></i> 3. Optical Settings (mm)</summary>
-                <div class="details-content">
-                    <div class="form-grid">
-                        <div class="input-group">
-                            <label>Light Source Z</label>
-                            <input type="number" id="light_z" value="280.0" step="0.1">
-                        </div>
-                        <div class="input-group">
-                            <label>Front Opening Z</label>
-                            <input type="number" id="front_z" value="80.0" step="0.1">
-                        </div>
-                        <div class="input-group">
-                            <label>Target Width</label>
-                            <input type="number" id="target_w" value="1500.0" step="0.1">
-                        </div>
-                        <div class="input-group">
-                            <label>Target Height</label>
-                            <input type="number" id="target_h" value="1600.0" step="0.1">
-                        </div>
-                    </div>
-                </div>
-            </details>
-
-            <!-- Tab 4: Preprocessing & Advanced -->
-            <details>
-                <summary><i class="fa-solid fa-gears" style="color:var(--primary); margin-right:8px;"></i> 4. Preprocessing & Design</summary>
-                <div class="details-content">
-                    <div class="input-group">
-                        <label>Resolution (pixels/mm)</label>
-                        <input type="number" id="res_val" value="2.0" step="0.1">
-                    </div>
-
-                    <div class="input-group">
-                        <label>Panel Type</label>
-                        <label class="radio-option">
-                            <input type="radio" name="panel_type" value="255" checked>
-                            <span>Cutout (White bg / Solid cuts)</span>
-                        </label>
-                        <label class="radio-option">
-                            <input type="radio" name="panel_type" value="0">
-                            <span>Solid (Black bg / Cutout holes)</span>
-                        </label>
-                    </div>
-
-                    <div class="input-group" style="border-top: 1px solid var(--card-border); padding-top: 10px;">
-                        <label class="checkbox-group">
-                            <input type="checkbox" id="use_edges">
-                            <span>Outline Mode (Canny Edges)</span>
-                        </label>
-                    </div>
-
-                    <div class="form-grid" id="canny_params_frame" style="display: none;">
-                        <div class="input-group">
-                            <label>Thresh 1</label>
-                            <input type="number" id="thresh1" value="50">
-                        </div>
-                        <div class="input-group">
-                            <label>Thresh 2</label>
-                            <input type="number" id="thresh2" value="150">
-                        </div>
-                    </div>
-
-                    <div class="input-group" style="border-top: 1px solid var(--card-border); padding-top: 10px;">
-                        <label class="checkbox-group">
-                            <input type="checkbox" id="use_custom_shape" checked>
-                            <span>Custom Panel Shape (Silhouette)</span>
-                        </label>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="checkbox-group">
-                            <input type="checkbox" id="ground_bottom">
-                            <span>Ground Bottom Silhouette</span>
-                        </label>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="checkbox-group">
-                            <input type="checkbox" id="draw_slits">
-                            <span>Add Alignment Slits (Mortise)</span>
-                        </label>
-                    </div>
-                </div>
-            </details>
-
-        </div>
-
-        <!-- Sticky Bottom Buttons -->
-        <div class="action-bar-fixed">
-            <button class="btn btn-secondary" id="btn-generate"><i class="fa-solid fa-play"></i> Run</button>
-            <button class="btn" id="btn-export"><i class="fa-solid fa-file-zipper"></i> Export ZIP</button>
-        </div>
-
-        <!-- Main Workspace -->
-        <div class="main-content">
-            <div class="previews-container">
-                <!-- Target Preview -->
-                <div class="preview-box">
-                    <div class="preview-title"><i class="fa-solid fa-bullseye"></i> Preprocessed Silhouette</div>
-                    <div class="canvas-container">
-                        <canvas id="canvasTargetPreview"></canvas>
-                    </div>
+                    <button class="btn btn-secondary" id="btn-autofit"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fit Silhouette</button>
                 </div>
 
-                <!-- Unfolded Layout Preview -->
-                <div class="preview-box">
-                    <div class="preview-title"><i class="fa-solid fa-map"></i> Unfolded Lamp Template</div>
-                    <div class="canvas-container">
-                        <canvas id="canvasCrossPreview"></canvas>
+                <!-- Box details and Optics details grouped in accordions -->
+                <details>
+                    <summary><i class="fa-solid fa-cube" style="color:var(--primary); margin-right:8px;"></i> Box Dimensions (mm)</summary>
+                    <div class="details-content">
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Width (X)</label>
+                                <input type="number" id="box_w" value="413.6" step="0.1">
+                            </div>
+                            <div class="input-group">
+                                <label>Height (Y)</label>
+                                <input type="number" id="box_h" value="435.5" step="0.1">
+                            </div>
+                            <div class="input-group full-width">
+                                <label>Depth (Z)</label>
+                                <input type="number" id="box_d" value="200.0" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary><i class="fa-solid fa-lightbulb" style="color:var(--primary); margin-right:8px;"></i> Optical Settings (mm)</summary>
+                    <div class="details-content">
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>Light Source Z</label>
+                                <input type="number" id="light_z" value="280.0" step="0.1">
+                            </div>
+                            <div class="input-group">
+                                <label>Front Opening Z</label>
+                                <input type="number" id="front_z" value="80.0" step="0.1">
+                            </div>
+                            <div class="input-group">
+                                <label>Target Width</label>
+                                <input type="number" id="target_w" value="1500.0" step="0.1">
+                            </div>
+                            <div class="input-group">
+                                <label>Target Height</label>
+                                <input type="number" id="target_h" value="1600.0" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details>
+                    <summary><i class="fa-solid fa-sliders" style="color:var(--primary); margin-right:8px;"></i> Settings & Outputs</summary>
+                    <div class="details-content">
+                        <div class="input-group">
+                            <label>Resolution (pixels/mm)</label>
+                            <input type="number" id="res_val" value="2.0" step="0.1">
+                        </div>
+
+                        <div class="input-group">
+                            <label>Panel Type</label>
+                            <label class="radio-option">
+                                <input type="radio" name="panel_type" value="255" checked>
+                                <span>Cutout (White bg / Solid cuts)</span>
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="panel_type" value="0">
+                                <span>Solid (Black bg / Cutout holes)</span>
+                            </label>
+                        </div>
+
+                        <div class="input-group" style="border-top: 1px solid var(--card-border); padding-top: 10px;">
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="use_edges">
+                                <span>Outline Mode (Canny Edges)</span>
+                            </label>
+                        </div>
+
+                        <div class="form-grid" id="canny_params_frame" style="display: none;">
+                            <div class="input-group">
+                                <label>Thresh 1</label>
+                                <input type="number" id="thresh1" value="50">
+                            </div>
+                            <div class="input-group">
+                                <label>Thresh 2</label>
+                                <input type="number" id="thresh2" value="150">
+                            </div>
+                        </div>
+
+                        <div class="input-group" style="border-top: 1px solid var(--card-border); padding-top: 10px;">
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="use_custom_shape" checked>
+                                <span>Custom Panel Shape (Silhouette)</span>
+                            </label>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="ground_bottom">
+                                <span>Ground Bottom Silhouette</span>
+                            </label>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="checkbox-group">
+                                <input type="checkbox" id="draw_slits">
+                                <span>Add Alignment Slits (Mortise)</span>
+                            </label>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Sticky bottom buttons for Maker -->
+                <div class="sticky-footer">
+                    <button class="btn btn-secondary" id="btn-generate"><i class="fa-solid fa-play"></i> Generate</button>
+                    <button class="btn" id="btn-export"><i class="fa-solid fa-file-zipper"></i> Export ZIP</button>
+                </div>
+            </div>
+
+            <!-- Previews for Maker -->
+            <div class="canvas-area">
+                <div class="grid-workspace">
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <div class="preview-header-title"><i class="fa-solid fa-bullseye"></i> Preprocessed Silhouette</div>
+                        </div>
+                        <div class="canvas-frame">
+                            <canvas id="canvasTargetPreview"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="preview-card">
+                        <div class="preview-header">
+                            <div class="preview-header-title"><i class="fa-solid fa-map"></i> Unfolded 3D Lamp Template</div>
+                        </div>
+                        <div class="canvas-frame">
+                            <canvas id="canvasCrossPreview"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- OpenCV Module Script Load -->
@@ -894,10 +1053,41 @@
         let wallBottom = null;
         let crossLayout = null; 
 
+        // Slider adjust step helper
+        function adjustSlider(id, amount) {
+            let el = document.getElementById(id);
+            if (!el) return;
+            let newVal = parseFloat(el.value) + amount;
+            el.value = Math.max(parseFloat(el.min), Math.min(parseFloat(el.max), newVal));
+            el.dispatchEvent(new Event('input'));
+        }
+
         function initApp() {
             rawTargetImage = generateDefaultSilhouette();
             setupEventListeners();
+            setupTabNavigation();
             updateProjections();
+        }
+
+        // Tab Switching Logic
+        function setupTabNavigation() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.workspace-panel').forEach(p => p.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    let targetTab = this.dataset.tab;
+                    document.getElementById('panel-' + targetTab).classList.add('active');
+                    
+                    // Force refresh preview canvases when tabs are switched
+                    if (targetTab === 'maker') {
+                        updateProjections();
+                    } else {
+                        vecRenderPreview();
+                    }
+                });
+            });
         }
 
         function generateDefaultSilhouette() {
@@ -1486,6 +1676,7 @@
                 link.click();
             });
         }
+
         // ============================================
         // VECTORIZER MODULE
         // ============================================
@@ -1495,7 +1686,6 @@
         let vecShowOriginal = true;
 
         (function initVectorizer() {
-            // Build palette preset buttons (1-10)
             let container = document.getElementById('palette-presets');
             for (let n = 1; n <= 10; n++) {
                 let btn = document.createElement('button');
@@ -1511,7 +1701,6 @@
                 container.appendChild(btn);
             }
 
-            // File input
             document.getElementById('vecFileInput').addEventListener('change', function(e) {
                 if (e.target.files.length > 0) {
                     let reader = new FileReader();
@@ -1533,19 +1722,16 @@
                 }
             });
 
-            // Threshold slider
             document.getElementById('vec_threshold').addEventListener('input', function() {
                 document.getElementById('val_vec_threshold').innerText = this.value;
                 vecProcess();
             });
 
-            // Contrast slider
             document.getElementById('vec_contrast').addEventListener('input', function() {
                 document.getElementById('val_vec_contrast').innerText = this.value + '%';
                 vecProcess();
             });
 
-            // Toggle Original / Output
             document.getElementById('vec-show-original').addEventListener('click', function() {
                 vecShowOriginal = true;
                 this.classList.add('active');
@@ -1559,7 +1745,6 @@
                 vecRenderPreview();
             });
 
-            // Use as Input button
             document.getElementById('btn-vec-use').addEventListener('click', function() {
                 if (!vecOutputCanvas) {
                     alert('Process an image first!');
@@ -1567,9 +1752,9 @@
                 }
                 rawTargetImage = vecOutputCanvas;
                 document.getElementById('upload-label').innerText = '(From Vectorizer)';
-                // Close vectorizer accordion, open silhouette accordion
-                document.getElementById('vec-section').removeAttribute('open');
-                updateProjections();
+                
+                // Switch Tab to Step 2
+                document.querySelector('.tab-btn[data-tab="maker"]').click();
             });
         })();
 
@@ -1585,7 +1770,6 @@
             let contrast = parseFloat(document.getElementById('vec_contrast').value) / 100.0;
             let threshold = parseInt(document.getElementById('vec_threshold').value);
 
-            // Apply contrast adjustment to source pixels
             let adjusted = new Uint8ClampedArray(pixels.length);
             for (let i = 0; i < pixels.length; i += 4) {
                 for (let ch = 0; ch < 3; ch++) {
@@ -1598,19 +1782,16 @@
 
             let outData;
             if (vecNumColors <= 2) {
-                // Simple threshold: 2 colors (black & white)
                 outData = new Uint8ClampedArray(pixels.length);
                 for (let i = 0; i < adjusted.length; i += 4) {
                     let gray = 0.299 * adjusted[i] + 0.587 * adjusted[i+1] + 0.114 * adjusted[i+2];
                     let val = gray > threshold ? 255 : 0;
-                    if (vecNumColors === 1) val = gray > threshold ? 255 : 0; // same for 1
                     outData[i] = val;
                     outData[i+1] = val;
                     outData[i+2] = val;
                     outData[i+3] = 255;
                 }
             } else {
-                // Median-cut color quantization
                 outData = medianCutQuantize(adjusted, w, h, vecNumColors);
             }
 
@@ -1622,10 +1803,8 @@
             outImgData.data.set(outData);
             outCtx.putImageData(outImgData, 0, 0);
 
-            // Show detected palette swatches
             updateSwatches(outData, w, h);
 
-            // Auto switch to output view
             vecShowOriginal = false;
             document.getElementById('vec-show-output').classList.add('active');
             document.getElementById('vec-show-original').classList.remove('active');
@@ -1645,12 +1824,11 @@
 
         function updateSwatches(data, w, h) {
             let colorSet = new Map();
-            let step = Math.max(1, Math.floor((w * h) / 5000)); // sample for speed
+            let step = Math.max(1, Math.floor((w * h) / 5000)); 
             for (let i = 0; i < data.length; i += 4 * step) {
                 let key = data[i] + ',' + data[i+1] + ',' + data[i+2];
                 colorSet.set(key, (colorSet.get(key) || 0) + 1);
             }
-            // Sort by frequency
             let sorted = [...colorSet.entries()].sort((a, b) => b[1] - a[1]);
             let container = document.getElementById('vec-swatches');
             container.innerHTML = '';
@@ -1664,19 +1842,15 @@
             });
         }
 
-        // Median-Cut Color Quantization
         function medianCutQuantize(pixels, w, h, numColors) {
-            // Collect all pixel colors
             let colors = [];
-            let step = Math.max(1, Math.floor((w * h) / 50000)); // sample for speed
+            let step = Math.max(1, Math.floor((w * h) / 50000)); 
             for (let i = 0; i < pixels.length; i += 4 * step) {
                 colors.push([pixels[i], pixels[i+1], pixels[i+2]]);
             }
 
-            // Median cut
             let buckets = [colors];
             while (buckets.length < numColors) {
-                // Find the bucket with the widest color range
                 let maxRange = -1;
                 let maxIdx = 0;
                 let maxChannel = 0;
@@ -1701,7 +1875,6 @@
                 buckets.push(bucket.slice(mid));
             }
 
-            // Compute average color per bucket
             let palette = buckets.map(bucket => {
                 if (bucket.length === 0) return [0, 0, 0];
                 let sum = [0, 0, 0];
@@ -1717,7 +1890,6 @@
                 ];
             });
 
-            // Map each pixel to nearest palette color
             let out = new Uint8ClampedArray(pixels.length);
             for (let i = 0; i < pixels.length; i += 4) {
                 let r = pixels[i], g = pixels[i+1], b = pixels[i+2];

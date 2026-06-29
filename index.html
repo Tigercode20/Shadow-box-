@@ -1259,91 +1259,12 @@
             let binary = new cv.Mat();
             let target_aspect = target_w_mm / target_h_mm;
             
-            if (use_custom_shape) {
-                let smoothed = new cv.Mat();
-                cv.bilateralFilter(srcMat, smoothed, 9, 75, 75);
-                
-                let thresh = new cv.Mat();
-                cv.threshold(smoothed, thresh, 100, 255, cv.THRESH_BINARY_INV);
-                
-                let contours = new cv.MatVector();
-                let hierarchy = new cv.Mat();
-                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-                
-                let body_mask = cv.Mat.zeros(srcMat.rows, srcMat.cols, cv.CV_8UC1);
-                if (contours.size() > 0) {
-                    let max_idx = 0;
-                    let max_area = 0;
-                    for (let i = 0; i < contours.size(); i++) {
-                        let area = cv.contourArea(contours.get(i));
-                        if (area > max_area) {
-                            max_area = area;
-                            max_idx = i;
-                        }
-                    }
-                    
-                    let color = new cv.Scalar(255);
-                    cv.drawContours(body_mask, contours, max_idx, color, -1, cv.LINE_8, hierarchy, 0);
-                    
-                    let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(25, 25));
-                    cv.morphologyEx(body_mask, body_mask, cv.MORPH_CLOSE, kernel);
-                }
-                
-                if (ground_bottom) {
-                    let h_mask = body_mask.rows;
-                    let w_mask = body_mask.cols;
-                    let cols_sum = new Int32Array(w_mask);
-                    for (let c = 0; c < w_mask; c++) {
-                        let sum = 0;
-                        for (let r = 0; r < h_mask; r++) {
-                            if (body_mask.ucharAt(r, c) > 0) {
-                                sum += 1;
-                            }
-                        }
-                        cols_sum[c] = sum;
-                    }
-                    
-                    let c_min = -1, c_max = -1;
-                    for (let c = 0; c < w_mask; c++) {
-                        if (cols_sum[c] > 0) {
-                            if (c_min === -1) c_min = c;
-                            c_max = c;
-                        }
-                    }
-                    
-                    if (c_min !== -1) {
-                        let span_w = c_max - c_min;
-                        let start_c = Math.round(c_min + 0.225 * span_w);
-                        let end_c = Math.round(c_min + 0.775 * span_w);
-                        
-                        for (let c = start_c; c < end_c; c++) {
-                            let r_max = -1;
-                            for (let r = h_mask - 1; r >= 0; r--) {
-                                if (body_mask.ucharAt(r, c) > 0) {
-                                    r_max = r;
-                                    break;
-                                }
-                            }
-                            if (r_max !== -1) {
-                                for (let r = r_max; r < h_mask; r++) {
-                                    body_mask.setUCharAt(r, c, 255);
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                let edges = new cv.Mat();
-                cv.Canny(smoothed, edges, thresh1, thresh2);
-                let kernel_edge = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-                cv.dilate(edges, edges, kernel_edge);
-                
-                let body_minus_edges = new cv.Mat();
-                cv.subtract(body_mask, edges, body_minus_edges);
-                cv.bitwise_not(body_minus_edges, binary);
-                
-                smoothed.delete(); thresh.delete(); contours.delete(); hierarchy.delete(); body_mask.delete(); edges.delete();
-            } else if (use_edges) {
+            // 1. Base binary threshold
+            let thresh = new cv.Mat();
+            cv.threshold(srcMat, thresh, 127, 255, cv.THRESH_BINARY);
+            
+            if (use_edges) {
+                // Outline Mode: run Canny edges
                 let smoothed = new cv.Mat();
                 cv.bilateralFilter(srcMat, smoothed, 9, 75, 75);
                 let edges = new cv.Mat();
@@ -1354,9 +1275,63 @@
                 
                 smoothed.delete(); edges.delete();
             } else {
-                cv.threshold(srcMat, binary, 127, 255, cv.THRESH_BINARY);
+                // Solid Mode: preserve all solid shapes and details
+                thresh.copyTo(binary);
             }
             
+            // 2. Custom Shape & Grounding
+            if (use_custom_shape && ground_bottom) {
+                // Identify body mask (black drawing pixels as 255)
+                let body_mask = new cv.Mat();
+                cv.threshold(binary, body_mask, 127, 255, cv.THRESH_BINARY_INV);
+                
+                let h_mask = body_mask.rows;
+                let w_mask = body_mask.cols;
+                let cols_sum = new Int32Array(w_mask);
+                for (let c = 0; c < w_mask; c++) {
+                    let sum = 0;
+                    for (let r = 0; r < h_mask; r++) {
+                        if (body_mask.ucharAt(r, c) > 0) {
+                            sum += 1;
+                        }
+                    }
+                    cols_sum[c] = sum;
+                }
+                
+                let c_min = -1, c_max = -1;
+                for (let c = 0; c < w_mask; c++) {
+                    if (cols_sum[c] > 0) {
+                        if (c_min === -1) c_min = c;
+                        c_max = c;
+                    }
+                }
+                
+                if (c_min !== -1) {
+                    let span_w = c_max - c_min;
+                    let start_c = Math.round(c_min + 0.225 * span_w);
+                    let end_c = Math.round(c_min + 0.775 * span_w);
+                    
+                    for (let c = start_c; c < end_c; c++) {
+                        let r_max = -1;
+                        for (let r = h_mask - 1; r >= 0; r--) {
+                            if (body_mask.ucharAt(r, c) > 0) {
+                                r_max = r;
+                                break;
+                            }
+                        }
+                        if (r_max !== -1) {
+                            for (let r = r_max; r < h_mask; r++) {
+                                binary.setUCharAt(r, c, 0); // Ground to black
+                            }
+                        }
+                    }
+                }
+                body_mask.delete();
+            }
+            
+            thresh.delete();
+            
+            // 3. Aspect ratio padding
             let img_h = binary.rows;
             let img_w = binary.cols;
             let img_aspect = img_w / img_h;

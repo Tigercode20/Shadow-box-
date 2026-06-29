@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎨 مولد صناديق الظلال الاحترافي المستقر</title>
+    <title>🎨 مولد صناديق الظلال الهرمي الاحترافي</title>
     <style>
         :root {
             --primary-color: #0070f3;
@@ -80,8 +80,8 @@
 <body>
 
 <div class="container">
-    <h2>📐 مولد صناديق الظلال الهرمي العكسي (مخطط مستقيم ومستقر)</h2>
-    <p>تعديل مستقر 100% يقوم بمط تفاصيل الشخصية داخلياً مع الحفاظ على أطراف الصندوق مستقيمة كصورة بلندر</p>
+    <h2>📐 مولد صناديق الظلال (مطابقة لـ Blender 100%)</h2>
+    <p>تم إصلاح اتصال الصندوق، اتجاهات الـ Deform، ومنع تداخل الأجزاء الفراغية</p>
     
     <div class="controls">
         <div>
@@ -95,8 +95,8 @@
         </div>
 
         <div class="slider-group">
-            <label for="skewSlider">📐 نسبة مط المنظور الداخلي: <span id="skewVal">40%</span></label>
-            <input type="range" id="skewSlider" min="10" max="100" value="40">
+            <label for="skewSlider">📐 نسبة ضغط/مط المنظور: <span id="skewVal">30%</span></label>
+            <input type="range" id="skewSlider" min="-100" max="100" value="-30">
         </div>
     </div>
 
@@ -138,24 +138,34 @@
         let w = imgElement.width;
         let h = imgElement.height;
 
-        // حساب أبعاد الصندوق والأطراف المفرودة
-        let sideW = Math.floor(w * 0.45);
-        let sideH = Math.floor(h * 0.45);
+        // حجم الصندوق المركزي الثابت
+        let boxW = Math.floor(w * 0.45);
+        let boxH = Math.floor(h * 0.55);
 
-        canvas.width = w + (sideW * 2);
-        canvas.height = h + (sideH * 2);
+        // حجم الأطراف (الجدران المفرودة)
+        let sideH = Math.floor(h * 0.3); 
+        let sideW = Math.floor(w * 0.3);
 
-        // خلفية بيضاء بالكامل
+        canvas.width = boxW + (sideW * 2);
+        canvas.height = boxH + (sideH * 2);
+
+        let bx1 = sideW;
+        let by1 = sideH;
+
+        // 1. رسم أرضية الهيكل الرمادي بالكامل كقطعة واحدة متصلة (مثل بلندر)
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // رسم المربع المركزي (BOX) بالرمادي
-        let bx1 = sideW;
-        let by1 = sideH;
-        ctx.fillStyle = "#e0e0e0";
-        ctx.fillRect(bx1, by1, w, h);
+        ctx.fillStyle = "#9e9e9e"; // لون الهيكل الرمادي الموحد
+        
+        // رسم الصليب المتصل
+        ctx.fillRect(bx1, by1, boxW, boxH); // المركز
+        ctx.fillRect(bx1, 0, boxW, sideH); // العلوي
+        ctx.fillRect(bx1, by1 + boxH, boxW, sideH); // السفلي
+        ctx.fillRect(0, by1, sideW, boxH); // الأيسر
+        ctx.fillRect(bx1 + boxW, by1, sideW, boxH); // الأيمن
 
-        // إنشاء كافاس مؤقت لتطبيق تأثير الـ Threshold (أسود وأبيض)
+        // 2. تطبيق عزل الألوان للرسمة (Threshold)
         let tempCanvas = document.createElement('canvas');
         tempCanvas.width = w;
         tempCanvas.height = h;
@@ -167,61 +177,68 @@
         let thresh = parseInt(thresholdSlider.value);
 
         for (let i = 0; i < data.length; i += 4) {
-            let brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
-            let val = (brightness > thresh) ? 255 : 0; // عكس الألوان ليكون قالب القص أسود
+            let brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            let val = (brightness > thresh) ? 255 : 0;
             data[i] = val; data[i+1] = val; data[i+2] = val;
         }
         tempCtx.putImageData(imgData, 0, 0);
 
         let skewFactor = parseInt(skewSlider.value) / 100;
 
-        // دالة مبتكرة لعمل سحب ومط للمنظور (Perspective Deform) سطر بسطر لضمان الاستقرار
-        function drawPerspectiveSide(sourceY, sourceH, targetX, targetY, targetW, targetH, direction) {
+        // 3. رسم الأجزاء داخل جدران الهرم بشكل مشوه هندسياً ومنعزل
+        function drawPerspectiveSide(srcX, srcY, srcW, srcH, targetX, targetY, targetW, targetH, rotation) {
             let sliceCanvas = document.createElement('canvas');
-            sliceCanvas.width = w;
-            sliceCanvas.height = sourceH;
+            sliceCanvas.width = srcW;
+            sliceCanvas.height = srcH;
             let sliceCtx = sliceCanvas.getContext('2d');
-            sliceCtx.drawImage(tempCanvas, 0, sourceY, w, sourceH, 0, 0, w, sourceH);
+            sliceCtx.drawImage(tempCanvas, srcX, srcY, srcW, srcH, 0, 0, srcW, srcH);
 
-            // إنشاء تدوير للجدران لتفرد للخارج
             ctx.save();
+            
+            // إنشاء قناع قطع (Clipping Mask) لضمان عدم خروج الرسمة عن حدود الجدار الرمادي
+            ctx.beginPath();
+            ctx.rect(targetX, targetY, targetW, targetH);
+            ctx.clip();
+
             ctx.translate(targetX + targetW/2, targetY + targetH/2);
-            if (direction === 'top') ctx.rotate(Math.PI);
-            if (direction === 'left') ctx.rotate(Math.PI / 2);
-            if (direction === 'right') ctx.rotate(-Math.PI / 2);
+            ctx.rotate(rotation);
             ctx.translate(-targetW/2, -targetH/2);
 
-            // عملية المط التدريجي الشبيهة بالهرم العكسي
+            // الـ Deform التدريجي
             for (let y = 0; y < targetH; y++) {
                 let progress = y / targetH;
-                // المط يزداد كلما ابتعدنا عن المركز
-                let scale = 1 + (progress * skewFactor); 
+                let scale = 1 + (progress * skewFactor);
                 let sliceW = targetW * scale;
                 let sliceX = (targetW - sliceW) / 2;
 
-                ctx.drawImage(sliceCanvas, 0, Math.floor((y/targetH) * sourceH), w, 1, sliceX, y, sliceW, 1);
+                ctx.drawImage(sliceCanvas, 0, Math.floor((y/targetH) * srcH), srcW, 1, sliceX, y, sliceW, 1);
             }
             ctx.restore();
         }
 
-        // 1. الطرف العلوي (Top)
-        drawPerspectiveSide(0, sideH, bx1, by1 - sideH, w, sideH, 'top');
+        // قص وتوزيع دقيق مطابق للـ Layout
+        // الطرف العلوي (الرأس)
+        drawPerspectiveSide(Math.floor(w*0.1), 0, Math.floor(w*0.8), sideH, bx1, 0, boxW, sideH, Math.PI);
 
-        // 2. الطرف السفلي (Lower)
-        drawPerspectiveSide(h - sideH, sideH, bx1, by1 + h, w, sideH, 'bottom');
+        // الطرف السفلي (اليد السفلى)
+        drawPerspectiveSide(Math.floor(w*0.1), h - sideH, Math.floor(w*0.8), sideH, bx1, by1 + boxH, boxW, sideH, 0);
 
-        // 3. الطرف الأيسر (Left) - نقوم بقص الجزء الأيسر ومطه بالتناسب بعد تعديل الأبعاد للتدوير
-        drawPerspectiveSide(0, h, bx1 - sideW, by1, sideW, h, 'left');
+        // الطرف الأيسر (الذراع الأيسر)
+        drawPerspectiveSide(0, Math.floor(h*0.1), sideW, Math.floor(h*0.8), 0, by1, sideW, boxH, Math.PI / 2);
 
-        // 4. الطرف الأيمن (Right)
-        drawPerspectiveSide(0, h, bx1 + w, by1, sideW, h, 'right');
+        // الطرف الأيمن (الذراع الأيمن)
+        drawPerspectiveSide(w - sideW, Math.floor(h*0.1), sideW, Math.floor(h*0.8), bx1 + boxW, by1, sideW, boxH, -Math.PI / 2);
+
+        // 4. مسح محتوى المربع المركزي (BOX) ليكون فارغاً تماماً مثل بلندر
+        ctx.fillStyle = "#757575"; 
+        ctx.fillRect(bx1, by1, boxW, boxH);
 
         downloadBtn.style.display = 'inline-block';
     }
 
     downloadBtn.addEventListener('click', () => {
         let link = document.createElement('a');
-        link.download = 'perfect-shadow-box.png';
+        link.download = 'perfect-shadow-box-layout.png';
         link.href = canvas.toDataURL("image/png");
         link.click();
     });

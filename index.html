@@ -484,6 +484,13 @@
 
                 <div class="input-group">
                     <label class="checkbox-group">
+                        <input type="checkbox" id="ground_bottom">
+                        <span>Ground Bottom Silhouette</span>
+                    </label>
+                </div>
+
+                <div class="input-group">
+                    <label class="checkbox-group">
                         <input type="checkbox" id="draw_slits">
                         <span>Add Alignment Slits (Mortise)</span>
                     </label>
@@ -638,7 +645,7 @@
             });
 
             // Automatic trigger for checkbuttons & input adjustments
-            let autoTriggers = ['box_w', 'box_h', 'box_d', 'light_z', 'front_z', 'target_w', 'target_h', 'res_val', 'use_custom_shape', 'draw_slits', 'thresh1', 'thresh2'];
+            let autoTriggers = ['box_w', 'box_h', 'box_d', 'light_z', 'front_z', 'target_w', 'target_h', 'res_val', 'use_custom_shape', 'ground_bottom', 'draw_slits', 'thresh1', 'thresh2'];
             autoTriggers.forEach(id => {
                 document.getElementById(id).addEventListener('change', updateProjections);
             });
@@ -654,7 +661,7 @@
         }
 
         // OpenCV pre-processing logic
-        function preprocessSilhouette(srcMat, target_w_mm, target_h_mm, use_edges, thresh1, thresh2, use_custom_shape) {
+        function preprocessSilhouette(srcMat, target_w_mm, target_h_mm, use_edges, thresh1, thresh2, use_custom_shape, ground_bottom) {
             let binary = new cv.Mat();
             let target_aspect = target_w_mm / target_h_mm;
             
@@ -688,44 +695,46 @@
                     cv.morphologyEx(body_mask, body_mask, cv.MORPH_CLOSE, kernel);
                 }
                 
-                // Selective vertical grounding for middle 55% of the body width
-                let h_mask = body_mask.rows;
-                let w_mask = body_mask.cols;
-                let cols_sum = new Int32Array(w_mask);
-                for (let c = 0; c < w_mask; c++) {
-                    let sum = 0;
-                    for (let r = 0; r < h_mask; r++) {
-                        if (body_mask.ucharAt(r, c) > 0) {
-                            sum += 1;
-                        }
-                    }
-                    cols_sum[c] = sum;
-                }
-                
-                let c_min = -1, c_max = -1;
-                for (let c = 0; c < w_mask; c++) {
-                    if (cols_sum[c] > 0) {
-                        if (c_min === -1) c_min = c;
-                        c_max = c;
-                    }
-                }
-                
-                if (c_min !== -1) {
-                    let span_w = c_max - c_min;
-                    let start_c = Math.round(c_min + 0.225 * span_w);
-                    let end_c = Math.round(c_min + 0.775 * span_w);
-                    
-                    for (let c = start_c; c < end_c; c++) {
-                        let r_max = -1;
-                        for (let r = h_mask - 1; r >= 0; r--) {
+                if (ground_bottom) {
+                    // Selective vertical grounding for middle 55% of the body width
+                    let h_mask = body_mask.rows;
+                    let w_mask = body_mask.cols;
+                    let cols_sum = new Int32Array(w_mask);
+                    for (let c = 0; c < w_mask; c++) {
+                        let sum = 0;
+                        for (let r = 0; r < h_mask; r++) {
                             if (body_mask.ucharAt(r, c) > 0) {
-                                r_max = r;
-                                break;
+                                sum += 1;
                             }
                         }
-                        if (r_max !== -1) {
-                            for (let r = r_max; r < h_mask; r++) {
-                                body_mask.setUCharAt(r, c, 255);
+                        cols_sum[c] = sum;
+                    }
+                    
+                    let c_min = -1, c_max = -1;
+                    for (let c = 0; c < w_mask; c++) {
+                        if (cols_sum[c] > 0) {
+                            if (c_min === -1) c_min = c;
+                            c_max = c;
+                        }
+                    }
+                    
+                    if (c_min !== -1) {
+                        let span_w = c_max - c_min;
+                        let start_c = Math.round(c_min + 0.225 * span_w);
+                        let end_c = Math.round(c_min + 0.775 * span_w);
+                        
+                        for (let c = start_c; c < end_c; c++) {
+                            let r_max = -1;
+                            for (let r = h_mask - 1; r >= 0; r--) {
+                                if (body_mask.ucharAt(r, c) > 0) {
+                                    r_max = r;
+                                    break;
+                                }
+                            }
+                            if (r_max !== -1) {
+                                for (let r = r_max; r < h_mask; r++) {
+                                    body_mask.setUCharAt(r, c, 255);
+                                }
                             }
                         }
                     }
@@ -1020,6 +1029,7 @@
             let thresh1 = parseInt(document.getElementById('thresh1').value);
             let thresh2 = parseInt(document.getElementById('thresh2').value);
             let use_custom_shape = document.getElementById('use_custom_shape').checked;
+            let ground_bottom = document.getElementById('ground_bottom').checked;
             let draw_slits = document.getElementById('draw_slits').checked;
             
             let img_scale = parseFloat(document.getElementById('img_scale').value) / 100.0;
@@ -1032,7 +1042,7 @@
             cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
             
             // 2. Preprocess target
-            let preprocessedMat = preprocessSilhouette(srcGray, target_w, target_h, use_edges, thresh1, thresh2, use_custom_shape);
+            let preprocessedMat = preprocessSilhouette(srcGray, target_w, target_h, use_edges, thresh1, thresh2, use_custom_shape, ground_bottom);
             
             // 3. Render target preview on canvas
             let canvasTarget = document.getElementById('canvasTargetPreview');

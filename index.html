@@ -509,6 +509,106 @@
                 backdrop-filter: blur(15px);
             }
         }
+
+        /* Vectorizer Styles */
+        .palette-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .palette-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--card-border);
+            background: rgba(255,255,255, 0.05);
+            color: var(--text-main);
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .palette-btn:hover {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.1);
+        }
+
+        .palette-btn.active {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.2);
+            box-shadow: 0 0 10px var(--primary-glow);
+            color: var(--primary);
+        }
+
+        .vec-preview-wrapper {
+            position: relative;
+            width: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+            background: #0f0f14;
+        }
+
+        .vec-preview-wrapper canvas {
+            width: 100%;
+            display: block;
+        }
+
+        .vec-toggle-bar {
+            display: flex;
+            gap: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--card-border);
+        }
+
+        .vec-toggle-bar button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            background: rgba(255,255,255,0.03);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .vec-toggle-bar button.active {
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--primary);
+        }
+
+        .color-swatches {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .color-swatch {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 2px solid rgba(255,255,255,0.15);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.15);
+            border-color: var(--primary);
+        }
+
+        .vec-info {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -532,6 +632,62 @@
     <div class="app-body">
         <!-- Sidebar controls -->
         <div class="sidebar">
+
+            <!-- Step 0: Vectorizer (Optional) -->
+            <details id="vec-section">
+                <summary><i class="fa-solid fa-wand-magic-sparkles" style="color:#f59e0b; margin-right:8px;"></i> 0. Vectorizer <span style="font-size:0.7rem; color:var(--text-muted); margin-left:6px;">(Optional)</span></summary>
+                <div class="details-content">
+                    <div class="input-group">
+                        <label class="file-upload-btn" for="vecFileInput">
+                            <i class="fa-solid fa-photo-film" style="color:#f59e0b;"></i>
+                            <span id="vec-upload-label">Upload Photo to Vectorize</span>
+                        </label>
+                        <input type="file" id="vecFileInput" accept="image/*" style="display: none;">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Palette Presets (Number of Colors)</label>
+                        <div class="palette-presets" id="palette-presets">
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Threshold / Brightness</label>
+                        <div class="slider-wrapper">
+                            <input type="range" id="vec_threshold" min="0" max="255" value="128">
+                            <span class="slider-val" id="val_vec_threshold">128</span>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Contrast Boost</label>
+                        <div class="slider-wrapper">
+                            <input type="range" id="vec_contrast" min="0" max="300" value="100">
+                            <span class="slider-val" id="val_vec_contrast">100%</span>
+                        </div>
+                    </div>
+
+                    <div class="vec-toggle-bar">
+                        <button id="vec-show-original" class="active">Original</button>
+                        <button id="vec-show-output">Output</button>
+                    </div>
+
+                    <div class="vec-preview-wrapper">
+                        <canvas id="vecPreviewCanvas" width="300" height="300"></canvas>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Detected Palette</label>
+                        <div class="color-swatches" id="vec-swatches"></div>
+                    </div>
+
+                    <div class="vec-info" id="vec-info">Upload an image to begin</div>
+
+                    <button class="btn" id="btn-vec-use" style="background: linear-gradient(135deg, #f59e0b, #ef4444);">
+                        <i class="fa-solid fa-arrow-right"></i> Use as Silhouette Input
+                    </button>
+                </div>
+            </details>
 
             <!-- Tab 1: Input & Adjustment -->
             <details open>
@@ -1329,6 +1485,259 @@
                 link.href = URL.createObjectURL(content);
                 link.click();
             });
+        }
+        // ============================================
+        // VECTORIZER MODULE
+        // ============================================
+        let vecOriginalCanvas = null;
+        let vecOutputCanvas = null;
+        let vecNumColors = 2;
+        let vecShowOriginal = true;
+
+        (function initVectorizer() {
+            // Build palette preset buttons (1-10)
+            let container = document.getElementById('palette-presets');
+            for (let n = 1; n <= 10; n++) {
+                let btn = document.createElement('button');
+                btn.className = 'palette-btn' + (n === 2 ? ' active' : '');
+                btn.textContent = n;
+                btn.dataset.n = n;
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    vecNumColors = parseInt(this.dataset.n);
+                    vecProcess();
+                });
+                container.appendChild(btn);
+            }
+
+            // File input
+            document.getElementById('vecFileInput').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    let reader = new FileReader();
+                    reader.onload = function(event) {
+                        let img = new Image();
+                        img.onload = function() {
+                            vecOriginalCanvas = document.createElement('canvas');
+                            vecOriginalCanvas.width = img.width;
+                            vecOriginalCanvas.height = img.height;
+                            let ctx = vecOriginalCanvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
+                            document.getElementById('vec-upload-label').innerText = e.target.files[0].name;
+                            document.getElementById('vec-info').innerText = img.width + ' x ' + img.height + ' px';
+                            vecProcess();
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
+
+            // Threshold slider
+            document.getElementById('vec_threshold').addEventListener('input', function() {
+                document.getElementById('val_vec_threshold').innerText = this.value;
+                vecProcess();
+            });
+
+            // Contrast slider
+            document.getElementById('vec_contrast').addEventListener('input', function() {
+                document.getElementById('val_vec_contrast').innerText = this.value + '%';
+                vecProcess();
+            });
+
+            // Toggle Original / Output
+            document.getElementById('vec-show-original').addEventListener('click', function() {
+                vecShowOriginal = true;
+                this.classList.add('active');
+                document.getElementById('vec-show-output').classList.remove('active');
+                vecRenderPreview();
+            });
+            document.getElementById('vec-show-output').addEventListener('click', function() {
+                vecShowOriginal = false;
+                this.classList.add('active');
+                document.getElementById('vec-show-original').classList.remove('active');
+                vecRenderPreview();
+            });
+
+            // Use as Input button
+            document.getElementById('btn-vec-use').addEventListener('click', function() {
+                if (!vecOutputCanvas) {
+                    alert('Process an image first!');
+                    return;
+                }
+                rawTargetImage = vecOutputCanvas;
+                document.getElementById('upload-label').innerText = '(From Vectorizer)';
+                // Close vectorizer accordion, open silhouette accordion
+                document.getElementById('vec-section').removeAttribute('open');
+                updateProjections();
+            });
+        })();
+
+        function vecProcess() {
+            if (!vecOriginalCanvas) return;
+
+            let w = vecOriginalCanvas.width;
+            let h = vecOriginalCanvas.height;
+            let srcCtx = vecOriginalCanvas.getContext('2d');
+            let srcData = srcCtx.getImageData(0, 0, w, h);
+            let pixels = srcData.data;
+
+            let contrast = parseFloat(document.getElementById('vec_contrast').value) / 100.0;
+            let threshold = parseInt(document.getElementById('vec_threshold').value);
+
+            // Apply contrast adjustment to source pixels
+            let adjusted = new Uint8ClampedArray(pixels.length);
+            for (let i = 0; i < pixels.length; i += 4) {
+                for (let ch = 0; ch < 3; ch++) {
+                    let v = pixels[i + ch];
+                    v = ((v / 255.0 - 0.5) * contrast + 0.5) * 255.0;
+                    adjusted[i + ch] = Math.max(0, Math.min(255, Math.round(v)));
+                }
+                adjusted[i + 3] = 255;
+            }
+
+            let outData;
+            if (vecNumColors <= 2) {
+                // Simple threshold: 2 colors (black & white)
+                outData = new Uint8ClampedArray(pixels.length);
+                for (let i = 0; i < adjusted.length; i += 4) {
+                    let gray = 0.299 * adjusted[i] + 0.587 * adjusted[i+1] + 0.114 * adjusted[i+2];
+                    let val = gray > threshold ? 255 : 0;
+                    if (vecNumColors === 1) val = gray > threshold ? 255 : 0; // same for 1
+                    outData[i] = val;
+                    outData[i+1] = val;
+                    outData[i+2] = val;
+                    outData[i+3] = 255;
+                }
+            } else {
+                // Median-cut color quantization
+                outData = medianCutQuantize(adjusted, w, h, vecNumColors);
+            }
+
+            vecOutputCanvas = document.createElement('canvas');
+            vecOutputCanvas.width = w;
+            vecOutputCanvas.height = h;
+            let outCtx = vecOutputCanvas.getContext('2d');
+            let outImgData = outCtx.createImageData(w, h);
+            outImgData.data.set(outData);
+            outCtx.putImageData(outImgData, 0, 0);
+
+            // Show detected palette swatches
+            updateSwatches(outData, w, h);
+
+            // Auto switch to output view
+            vecShowOriginal = false;
+            document.getElementById('vec-show-output').classList.add('active');
+            document.getElementById('vec-show-original').classList.remove('active');
+
+            vecRenderPreview();
+        }
+
+        function vecRenderPreview() {
+            let canvas = document.getElementById('vecPreviewCanvas');
+            let src = vecShowOriginal ? vecOriginalCanvas : vecOutputCanvas;
+            if (!src) return;
+            canvas.width = src.width;
+            canvas.height = src.height;
+            let ctx = canvas.getContext('2d');
+            ctx.drawImage(src, 0, 0);
+        }
+
+        function updateSwatches(data, w, h) {
+            let colorSet = new Map();
+            let step = Math.max(1, Math.floor((w * h) / 5000)); // sample for speed
+            for (let i = 0; i < data.length; i += 4 * step) {
+                let key = data[i] + ',' + data[i+1] + ',' + data[i+2];
+                colorSet.set(key, (colorSet.get(key) || 0) + 1);
+            }
+            // Sort by frequency
+            let sorted = [...colorSet.entries()].sort((a, b) => b[1] - a[1]);
+            let container = document.getElementById('vec-swatches');
+            container.innerHTML = '';
+            sorted.forEach(([key, count]) => {
+                let [r, g, b] = key.split(',');
+                let swatch = document.createElement('div');
+                swatch.className = 'color-swatch';
+                swatch.style.background = 'rgb(' + r + ',' + g + ',' + b + ')';
+                swatch.title = 'RGB(' + r + ',' + g + ',' + b + ')';
+                container.appendChild(swatch);
+            });
+        }
+
+        // Median-Cut Color Quantization
+        function medianCutQuantize(pixels, w, h, numColors) {
+            // Collect all pixel colors
+            let colors = [];
+            let step = Math.max(1, Math.floor((w * h) / 50000)); // sample for speed
+            for (let i = 0; i < pixels.length; i += 4 * step) {
+                colors.push([pixels[i], pixels[i+1], pixels[i+2]]);
+            }
+
+            // Median cut
+            let buckets = [colors];
+            while (buckets.length < numColors) {
+                // Find the bucket with the widest color range
+                let maxRange = -1;
+                let maxIdx = 0;
+                let maxChannel = 0;
+                for (let b = 0; b < buckets.length; b++) {
+                    if (buckets[b].length < 2) continue;
+                    for (let ch = 0; ch < 3; ch++) {
+                        let vals = buckets[b].map(c => c[ch]);
+                        let range = Math.max(...vals) - Math.min(...vals);
+                        if (range > maxRange) {
+                            maxRange = range;
+                            maxIdx = b;
+                            maxChannel = ch;
+                        }
+                    }
+                }
+                if (maxRange <= 0) break;
+
+                let bucket = buckets.splice(maxIdx, 1)[0];
+                bucket.sort((a, b) => a[maxChannel] - b[maxChannel]);
+                let mid = Math.floor(bucket.length / 2);
+                buckets.push(bucket.slice(0, mid));
+                buckets.push(bucket.slice(mid));
+            }
+
+            // Compute average color per bucket
+            let palette = buckets.map(bucket => {
+                if (bucket.length === 0) return [0, 0, 0];
+                let sum = [0, 0, 0];
+                for (let c of bucket) {
+                    sum[0] += c[0];
+                    sum[1] += c[1];
+                    sum[2] += c[2];
+                }
+                return [
+                    Math.round(sum[0] / bucket.length),
+                    Math.round(sum[1] / bucket.length),
+                    Math.round(sum[2] / bucket.length)
+                ];
+            });
+
+            // Map each pixel to nearest palette color
+            let out = new Uint8ClampedArray(pixels.length);
+            for (let i = 0; i < pixels.length; i += 4) {
+                let r = pixels[i], g = pixels[i+1], b = pixels[i+2];
+                let bestDist = Infinity;
+                let bestColor = palette[0];
+                for (let p of palette) {
+                    let dr = r - p[0], dg = g - p[1], db = b - p[2];
+                    let dist = dr*dr + dg*dg + db*db;
+                    if (dist < bestDist) {
+                        bestDist = dist;
+                        bestColor = p;
+                    }
+                }
+                out[i] = bestColor[0];
+                out[i+1] = bestColor[1];
+                out[i+2] = bestColor[2];
+                out[i+3] = 255;
+            }
+
+            return out;
         }
     </script>
 </body>

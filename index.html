@@ -3,451 +3,263 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎨 مولد صناديق الظلال المطور | Perspective Shadow Box Generator</title>
+    <title>🎨 مولد إسقاط صناديق الظلال الهرمي</title>
     <style>
         :root {
-            --primary-color: #3b82f6;
-            --bg-color: #f3f4f6;
-            --text-color: #1f2937;
+            --primary-color: #0070f3;
+            --bg-color: #f5f5f7;
             --panel-bg: #ffffff;
-            --border-radius: 12px;
         }
 
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-color);
-            color: var(--text-color);
             margin: 0;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            direction: rtl;
         }
 
-        .main-container {
-            width: 100%;
+        .container {
             max-width: 900px;
             background: var(--panel-bg);
-            padding: 30px;
-            border-radius: var(--border-radius);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        }
-
-        .header {
+            margin: 0 auto;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             text-align: center;
-            margin-bottom: 30px;
         }
 
-        .header h1 {
-            font-size: 2.2rem;
-            margin: 0 0 10px;
-        }
-
-        .header p {
-            color: #6b7280;
-            font-size: 1.1rem;
-        }
-
-        .input-panel {
-            background: #f9fafb;
+        .controls {
+            background: #fafafa;
             padding: 20px;
-            border-radius: var(--border-radius);
-            margin-bottom: 30px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            align-items: center;
-        }
-
-        .file-upload-wrapper {
-            position: relative;
-            overflow: hidden;
-            display: inline-block;
-        }
-
-        .btn-upload {
-            border: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            background-color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
+            border-radius: 12px;
+            margin: 20px 0;
             display: flex;
-            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
             justify-content: center;
-        }
-
-        .file-upload-wrapper input[type=file] {
-            font-size: 100px;
-            position: absolute;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            cursor: pointer;
+            align-items: center;
+            border: 1px solid #eaeaea;
         }
 
         .slider-group {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            align-items: flex-start;
+            gap: 5px;
         }
 
-        .slider-group label {
-            font-weight: 500;
+        input[type="range"] {
+            width: 200px;
         }
 
-        .slider-control {
-            width: 100%;
-            height: 6px;
-            -webkit-appearance: none;
-            background: #e5e7eb;
-            outline: none;
-            border-radius: 3px;
-        }
-
-        .slider-control::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            background: var(--primary-color);
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        .output-panel {
-            text-align: center;
-        }
-
-        .output-panel h3 {
-            margin-bottom: 20px;
-        }
-
-        #canvasOutput {
+        canvas {
             max-width: 100%;
             height: auto;
-            border: 2px solid #e5e7eb;
+            border: 2px dashed #ccc;
             border-radius: 8px;
-            background-color: #fff;
-            margin-bottom: 20px;
+            margin-top: 20px;
+            background: #fff;
         }
 
-        .btn-download {
-            background-color: var(--primary-color);
+        .btn {
+            background: var(--primary-color);
             color: white;
             border: none;
             padding: 12px 24px;
-            font-size: 1rem;
-            font-weight: 600;
+            font-size: 16px;
             border-radius: 8px;
             cursor: pointer;
+            font-weight: 600;
+            margin-top: 15px;
+            display: inline-block;
             text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
         }
 
-        .loading-status {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255,255,255,0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            z-index: 1000;
+        #loading {
+            color: #ff3b30;
+            font-weight: bold;
+            font-size: 1.2rem;
         }
     </style>
     <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();"></script>
 </head>
 <body>
 
-    <div id="loadingStatus" class="loading-status">
-        🔄 جاري تحميل محرك المعالجة البصرية (OpenCV)...
-    </div>
+<div class="container">
+    <h2>📐 مولد الظلال الهرمي العكسي (Pyramid Projection)</h2>
+    <p>يقوم الكود بمط الأطراف لتصبح عمودية ورأسية عند فرد الصندوق، لتعطي ظلاً مستقيماً ومثالياً</p>
+    
+    <div id="loading">🔄 جاري تهيئة محرك الهندسة البصرية...</div>
 
-    <div class="main-container">
-        <div class="header">
-            <h1>🎨 مولد صناديق الظلال المطور (Perspective)</h1>
-            <p>حوّل صورتك لهيكل صندوق مفرود ومعالج بصرياً للقص!</p>
+    <div class="controls">
+        <div>
+            <label style="font-weight:600;">📁 ارفع الصورة: </label>
+            <input type="file" id="fileInput" accept="image/*" disabled>
+        </div>
+        
+        <div class="slider-group">
+            <label for="thresholdSlider">🎚️ درجة العزل (Threshold): <span id="threshVal">115</span></label>
+            <input type="range" id="thresholdSlider" min="0" max="255" value="115" disabled>
         </div>
 
-        <div class="input-panel">
-            <div class="file-upload-wrapper">
-                <button class="btn-upload">📁 اختر صورة...</button>
-                <input type="file" id="fileInput" accept="image/*" disabled>
-            </div>
-
-            <div class="slider-group">
-                <label for="thresholdSlider">
-                    🎚️ درجة عزل الظلال (Threshold): <span id="thresholdValue">115</span>
-                </label>
-                <input type="range" id="thresholdSlider" class="slider-control" min="0" max="255" value="115" disabled>
-            </div>
-        </div>
-
-        <div class="output-panel">
-            <h3>الهيكل النهائي (Perspective Unfolded Layout)</h3>
-            <canvas id="canvasOutput"></canvas>
-            <br>
-            <button class="btn-download" id="downloadBtn" style="display:none;">
-                💾 تحميل التصميم النهائي (PNG)
-            </button>
+        <div class="slider-group">
+            <label for="slopeSlider">📐 زاوية ميل الأطراف (Perspective Flare): <span id="slopeVal">40%</span></label>
+            <input type="range" id="slopeSlider" min="10" max="80" value="40" disabled>
         </div>
     </div>
 
-    <script>
-        let imgElement = new Image();
-        let fileInput = document.getElementById('fileInput');
-        let thresholdSlider = document.getElementById('thresholdSlider');
-        let thresholdValue = document.getElementById('thresholdValue');
-        let downloadBtn = document.getElementById('downloadBtn');
-        let loadingStatus = document.getElementById('loadingStatus');
+    <div>
+        <canvas id="canvasOutput"></canvas>
+    </div>
+    
+    <button class="btn" id="downloadBtn" style="display:none;">💾 تحميل المخطط العمودي</button>
+</div>
 
-        function onOpenCvReady() {
-            loadingStatus.style.display = 'none';
-            fileInput.disabled = false;
-            thresholdSlider.disabled = false;
+<script>
+    let imgElement = new Image();
+    let fileInput = document.getElementById('fileInput');
+    let thresholdSlider = document.getElementById('thresholdSlider');
+    let slopeSlider = document.getElementById('slopeSlider');
+    let downloadBtn = document.getElementById('downloadBtn');
+
+    function onOpenCvReady() {
+        document.getElementById('loading').style.display = 'none';
+        fileInput.disabled = false;
+        thresholdSlider.disabled = false;
+        slopeSlider.disabled = false;
+    }
+
+    fileInput.addEventListener('change', (e) => {
+        if(e.target.files.length > 0) {
+            let reader = new FileReader();
+            reader.onload = (event) => { imgElement.src = event.target.result; };
+            reader.readAsDataURL(e.target.files[0]);
         }
-
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                let reader = new FileReader();
-                reader.onload = function(event) {
-                    imgElement.src = event.target.result;
-                }
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        });
-
-        imgElement.onload = function() {
-            processImage();
-        };
-
-        thresholdSlider.addEventListener('input', (e) => {
-            thresholdValue.innerText = e.target.value;
-            if (imgElement.src) processImage();
-        });
-
-        function getPerspectiveTransform(src, srcCoords, dstCoords) {
-            let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, srcCoords);
-            let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, dstCoords);
-            let M = cv.getPerspectiveTransform(srcTri, dstTri);
-            let dst = new cv.Mat();
-            cv.warpPerspective(src, dst, M, new cv.Size(src.cols, src.rows));
-            srcTri.delete(); dstTri.delete(); M.delete();
-            return dst;
-        }
-
-        function processImage() {
-            if (!cv.Mat) return;
-
-            let src = cv.imread(imgElement);
-            let gray = new cv.Mat();
-            cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-
-            let binary = new cv.Mat();
-            let threshVal = parseInt(thresholdSlider.value);
-            cv.threshold(gray, binary, threshVal, 255, cv.THRESH_BINARY_INV);
-
-            let h = binary.rows;
-            let w = binary.cols;
-
-            // تحديد مناطق الأطراف قبل التشوه
-            let wRegion = Math.floor(w * 0.4);
-            let hRegion = Math.floor(h * 0.4);
-            let hMid = Math.floor(h * 0.5);
-            let wMid = Math.floor(w * 0.5);
-
-            let rectT = new cv.Rect(Math.floor(w*0.1), 0, Math.floor(w*0.8), hRegion);
-            let rectB = new cv.Rect(Math.floor(w*0.1), h - hRegion, Math.floor(w*0.8), hRegion);
-            let rectL = new cv.Rect(0, Math.floor(h*0.1), wRegion, Math.floor(h*0.8));
-            let rectR = new cv.Rect(w - wRegion, Math.floor(h*0.1), wRegion, Math.floor(h*0.8));
-
-            let topP = binary.roi(rectT);
-            let botP = binary.roi(rectB);
-            let lefP = binary.roi(rectL);
-            let rigP = binary.roi(rectR);
-
-            // تدوير الأجزاء
-            let topR = new cv.Mat(), lefR = new cv.Mat(), rigR = new cv.Mat();
-            cv.rotate(topP, topR, cv.ROTATE_180);
-            cv.rotate(lefP, lefR, cv.ROTATE_90_COUNTERCLOCKWISE);
-            cv.rotate(rigP, rigR, cv.ROTATE_90_CLOCKWISE);
-
-            // تطبيق التشوه البصري (Perspective)
-            // المعامل K يتحكم في درجة الضم والسط
-            let k = 0.25; 
-            
-            // علوي: ضم من الأعلى (نقاط البداية)، سط من الأسفل (نقاط النهاية)
-            let topDef = getPerspectiveTransform(topR, 
-                [0, 0, topR.cols, 0, 0, topR.rows, topR.cols, topR.rows],
-                [topR.cols * k, 0, topR.cols * (1-k), 0, 0, topR.rows, topR.cols, topR.rows]);
-
-            // سفلي: سط من الأعلى، ضم من الأسفل
-            let botDef = getPerspectiveTransform(botP,
-                [0, 0, botP.cols, 0, 0, botP.rows, botP.cols, botP.rows],
-                [0, 0, botP.cols, 0, botP.cols * k, botP.rows, botP.cols * (1-k), botP.rows]);
-
-            // أيسر: ضم من اليسار، سط من اليمين
-            let lefDef = getPerspectiveTransform(lefR,
-                [0, 0, lefR.cols, 0, 0, lefR.rows, lefR.cols, lefR.rows],
-                [0, lefR.rows * k, lefR.cols, 0, 0, lefR.rows * (1-k), lefR.cols, lefR.rows]);
-
-            // أيمن: سط من اليسار، ضم من اليمين
-            let rigDef = getPerspectiveTransform(rigR,
-                [0, 0, rigR.cols, 0, 0, rigR.rows, rigR.cols, rigR.rows],
-                [0, 0, rigR.cols, rigR.rows * k, 0, rigR.rows, rigR.cols, rigR.rows * (1-k)]);
-
-            // إنشاء اللوحة النهائية
-            let cW = Math.floor(w * 2.2), cH = Math.floor(h * 2.2);
-            let finalMat = new cv.Mat(cH, cW, cv.CV_8UC1, new cv.Scalar(255));
-            let midX = Math.floor(cW/2), midY = Math.floor(cH/2);
-
-            // وضع أرضية الصندوق
-            let cRect = new cv.Rect(midX - wMid, midY - hMid, w, h);
-            cv.rectangle(finalMat, {x:cRect.x, y:cRect.y}, {x:cRect.x+w, y:cRect.y+h}, new cv.Scalar(240), -1);
-
-            // دمج الأجزاء المشوهة
-            function paste(mat, x, y) {
-                let dst = finalMat.roi(new cv.Rect(x, y, mat.cols, mat.rows));
-                mat.copyTo(dst); dst.delete();
-            }
-
-            paste(topDef, midX - Math.floor(topDef.cols/2), cRect.y - topDef.rows);
-            paste(botDef, midX - Math.floor(botDef.cols/2), cRect.y + h);
-            paste(lefDef, cRect.x - lefDef.cols, midY - Math.floor(lefDef.rows/2));
-            paste(rigDef, cRect.x + w, midY - Math.floor(rigDef.rows/2));
-
-            cv.imshow('canvasOutput', finalMat);
-            downloadBtn.style.display = 'inline-block';
-
-            src.delete(); gray.delete(); binary.delete();
-            topP.delete(); botP.delete(); lefP.delete(); rigP.delete();
-            topR.delete(); lefR.delete(); rigR.delete();
-            topDef.delete(); botDef.delete(); lefDef.delete(); rigDef.delete();
-            finalMat.delete();
-        }
-
-        downloadBtn.addEventListener('click', () => {
-            let canvas = document.getElementById('canvasOutput');
-            let link = document.createElement('a');
-            link.download = 'jojo-shadow-box-perspective.png';
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-        });
-    </script>
-</body>
-</html>
-    imgElement.onload = function() {
-        processImage();
-    };
-
-    thresholdSlider.addEventListener('input', (e) => {
-        thresholdValue.innerText = e.target.value;
-        if(imgElement.src) processImage();
     });
 
-    function processImage() {
+    imgElement.onload = () => { processShadowBox(); };
+    thresholdSlider.addEventListener('input', () => {
+        document.getElementById('threshVal').innerText = thresholdSlider.value;
+        if(imgElement.src) processShadowBox();
+    });
+    slopeSlider.addEventListener('input', () => {
+        document.getElementById('slopeVal').innerText = slopeSlider.value + "%";
+        if(imgElement.src) processShadowBox();
+    });
+
+    function processShadowBox() {
         if (!cv.Mat) return;
 
-        // قراءة الصورة الأصلية
         let src = cv.imread(imgElement);
         let gray = new cv.Mat();
         let binary = new cv.Mat();
 
-        // تحويلها لرمادي ثم أبيض وأسود عتبة (Binary Threshold)
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        let threshVal = parseInt(thresholdSlider.value);
-        cv.threshold(gray, binary, threshVal, 255, cv.THRESH_BINARY_INV);
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        cv.threshold(gray, binary, parseInt(thresholdSlider.value), 255, cv.THRESH_BINARY_INV);
 
         let h = binary.rows;
         let w = binary.cols;
 
-        // قص الأجزاء الأربعة (أبعاد تقريبية للشكل الهيكلي للهاتف)
-        let rectTop = new cv.Rect(Math.floor(w*0.2), 0, Math.floor(w*0.6), Math.floor(h*0.35));
-        let rectBottom = new cv.Rect(Math.floor(w*0.2), Math.floor(h*0.65), Math.floor(w*0.6), Math.floor(h*0.35));
-        let rectLeft = new cv.Rect(0, Math.floor(h*0.2), Math.floor(w*0.35), Math.floor(h*0.6));
-        let rectRight = new cv.Rect(Math.floor(w*0.65), Math.floor(h*0.2), Math.floor(w*0.35), Math.floor(h*0.6));
+        // الأبعاد الافتراضية للصندوق الداخلي (BOX)
+        let boxW = Math.floor(w * 0.4);
+        let boxH = Math.floor(h * 0.5);
 
-        let topPart = binary.roi(rectTop);
-        let bottomPart = binary.roi(rectBottom);
-        let leftPart = binary.roi(rectLeft);
-        let rightPart = binary.roi(rectRight);
+        // نسبة الميل والمط المطلوبة للأطراف بناءً على السلايدر
+        let flarePct = parseInt(slopeSlider.value) / 100;
+        let flareW = Math.floor(boxW * flarePct);
+        let flareH = Math.floor(boxH * flarePct);
 
-        // تدوير الأجزاء المفرودة
-        let topRotated = new cv.Mat();
-        let leftRotated = new cv.Mat();
-        let rightRotated = new cv.Mat();
-
-        cv.rotate(topPart, topRotated, cv.ROTATE_180);
-        cv.rotate(leftPart, leftRotated, cv.ROTATE_90_COUNTERCLOCKWISE);
-        cv.rotate(rightPart, rightRotated, cv.ROTATE_90_CLOCKWISE);
-
-        // إنشاء لوحة الخلفية الكبيرة (Canvas) بيضاء اللون
-        let canvasW = Math.floor(w * 1.5);
-        let canvasH = Math.floor(h * 1.5);
+        // إنشاء لوحة الرسم الكبيرة تتسع للشكل الهرمي بالكامل
+        let canvasW = boxW + (boxH + flareH) * 2;
+        let canvasH = boxH + (boxW + flareW) * 2;
         let canvasMat = new cv.Mat(canvasH, canvasW, cv.CV_8UC1, new cv.Scalar(255));
 
-        let centerX = Math.floor(canvasW / 2);
-        let centerY = Math.floor(canvasH / 2);
-        let rectW = Math.floor(w * 0.5);
-        let rectH = Math.floor(h * 0.5);
+        // إحداثيات مركز الصندوق الداخلي الثابت (BOX)
+        let bx1 = Math.floor((canvasW - boxW) / 2);
+        let by1 = Math.floor((canvasH - boxH) / 2);
+        let bx2 = bx1 + boxW;
+        let by2 = by1 + boxH;
 
-        // رسم مربع المركز (أرضية الصندوق) بالرمادي الفاتح
-        let p1 = new cv.Point(centerX - Math.floor(rectW/2), centerY - Math.floor(rectH/2));
-        let p2 = new cv.Point(centerX + Math.floor(rectW/2), centerY + Math.floor(rectH/2));
-        cv.rectangle(canvasMat, p1, p2, new cv.Scalar(220), -1);
+        // رسم المربع المركزي (أرضية الصندوق الثابتة)
+        cv.rectangle(canvasMat, new cv.Point(bx1, by1), new cv.Point(bx2, by2), new cv.Scalar(230), -1);
 
-        // دمج الأجزاء المدورة في أماكنها حول الصندوق
-        try {
-            // الجزء العلوي
-            let dstTop = canvasMat.roi(new cv.Rect(centerX - Math.floor(topRotated.cols/2), p1.y - topRotated.rows, topRotated.cols, topRotated.rows));
-            topRotated.copyTo(dstTop);
+        // دالة معالجة وعمل الـ Deform والـ Warp لكل طرف بشكل مستقل ليصبح عمودياً ورأسياً تماماً
+        function warpSide(srcCrop, srcCoords, dstCoords, targetMat) {
+            let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, srcCoords);
+            let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, dstCoords);
+            let M = cv.getPerspectiveTransform(srcTri, dstTri);
             
-            // الجزء السفلي
-            let dstBottom = canvasMat.roi(new cv.Rect(centerX - Math.floor(bottomPart.cols/2), p2.y, bottomPart.cols, bottomPart.rows));
-            bottomPart.copyTo(dstBottom);
+            let warped = new cv.Mat();
+            cv.warpPerspective(srcCrop, warped, M, new cv.Size(canvasW, canvasH));
+            
+            // دمج الجزء المشوه فوق اللوحة الأساسية
+            let mask = new cv.Mat();
+            cv.threshold(warped, mask, 1, 255, cv.THRESH_BINARY);
+            warped.copyTo(targetMat, mask);
 
-            // الجزء الأيسر
-            let dstLeft = canvasMat.roi(new cv.Rect(p1.x - leftRotated.cols, centerY - Math.floor(leftRotated.rows/2), leftRotated.cols, leftRotated.rows));
-            leftRotated.copyTo(dstLeft);
-
-            // الجزء الأيمن
-            let dstRight = canvasMat.roi(new cv.Rect(p2.x, centerY - Math.floor(rightRotated.rows/2), rightRotated.cols, rightRotated.rows));
-            rightRotated.copyTo(dstRight);
-        } catch(e) {
-            console.log("خطأ بسيط في الأبعاد أستُثنيت معالجته");
+            srcTri.delete(); dstTri.delete(); M.delete(); warped.delete(); mask.delete();
         }
 
-        // عرض النتيجة على الـ Canvas الخاص بـ HTML
-        cv.imshow('canvasOutput', canvasMat);
+        // 1. الطرف العلوي (Top) -> مط مائل لأعلى وللخارج
+        let topCrop = binary.roi(new cv.Rect(0, 0, w, Math.floor(h * 0.4)));
+        let tSrc = [0, 0,  w, 0,  0, topCrop.rows,  w, topCrop.rows];
+        let tDst = [
+            bx1 - flareW, by1 - boxH,       // أعلى يسار مائل ومطاطي
+            bx2 + flareW, by1 - boxH,       // أعلى يمين مائل ومطاطي
+            bx1, by1,                       // أسفل يسار ثابت على حافة الـ BOX
+            bx2, by1                        // أسفل يمين ثابت على حافة الـ BOX
+        ];
+        warpSide(topCrop, tSrc, tDst, canvasMat);
 
-        // إظهار زر التحميل
+        // 2. الطرف السفلي (Lower) -> مط مائل لأسفل وللخارج
+        let botCrop = binary.roi(new cv.Rect(0, Math.floor(h * 0.6), w, Math.floor(h * 0.4)));
+        let bSrc = [0, 0,  w, 0,  0, botCrop.rows,  w, botCrop.rows];
+        let bDst = [
+            bx1, by2,                       // أعلى يسار ثابت على حافة الـ BOX
+            bx2, by2,                       // أعلى يمين ثابت على حافة الـ BOX
+            bx1 - flareW, by2 + boxH,       // أسفل يسار مائل ومطاطي
+            bx2 + flareW, by2 + boxH        // أسفل يمين مائل ومطاطي
+        ];
+        warpSide(botCrop, bSrc, bDst, canvasMat);
+
+        // 3. الطرف الأيسر (Lift)
+        let leftCrop = binary.roi(new cv.Rect(0, 0, Math.floor(w * 0.4), h));
+        let lSrc = [0, 0,  leftCrop.cols, 0,  0, h,  leftCrop.cols, h];
+        let lDst = [
+            bx1 - boxW, by1 - flareH,       // أقصى أعلى يسار مائل ومطاطي
+            bx1, by1,                       // أعلى يمين ثابت
+            bx1 - boxW, by2 + flareH,       // أقصى أسفل يسار مائل ومطاطي
+            bx1, by2                        // أسفل يمين ثابت
+        ];
+        warpSide(leftCrop, lSrc, lDst, canvasMat);
+
+        // 4. الطرف الأيمن (Right)
+        let rightCrop = binary.roi(new cv.Rect(Math.floor(w * 0.6), 0, Math.floor(w * 0.4), h));
+        let rSrc = [0, 0,  rightCrop.cols, 0,  0, h,  rightCrop.cols, h];
+        let rDst = [
+            bx2, by1,                       // أعلى يسار ثابت
+            bx2 + boxW, by1 - flareH,       // أقصى أعلى يمين مائل ومطاطي
+            bx2, by2,                       // أسفل يسار ثابت
+            bx2 + boxW, by2 + flareH        // أقصى أسفل يمين مائل ومطاطي
+        ];
+        warpSide(rightCrop, rSrc, rDst, canvasMat);
+
+        // عرض النتيجة النهائية العمودية بالكامل
+        cv.imshow('canvasOutput', canvasMat);
         downloadBtn.style.display = 'inline-block';
 
         // تنظيف الذاكرة
-        src.delete(); gray.delete(); binary.delete(); topPart.delete(); bottomPart.delete();
-        leftPart.delete(); rightPart.delete(); topRotated.delete(); leftRotated.delete();
-        rightRotated.delete(); canvasMat.delete();
+        src.delete(); gray.delete(); binary.delete();
+        topCrop.delete(); botCrop.delete(); leftCrop.delete(); rightCrop.delete();
+        canvasMat.delete();
     }
 
-    // تفعيل خاصية تحميل الصورة الناتجة عند الضغط على الزر
     downloadBtn.addEventListener('click', () => {
         let canvas = document.getElementById('canvasOutput');
-        let imageURL = canvas.toDataURL("image/png");
         let link = document.createElement('a');
-        link.download = 'shadow_box_layout.png';
-        link.href = imageURL;
+        link.download = 'perfect-shadow-box-pyramid.png';
+        link.href = canvas.toDataURL("image/png");
         link.click();
     });
 </script>

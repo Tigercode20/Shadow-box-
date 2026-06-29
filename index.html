@@ -337,6 +337,31 @@
             max-height: 100%;
             object-fit: contain;
         }
+
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+                height: auto;
+                overflow-y: auto;
+            }
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--card-border);
+                padding: 15px;
+            }
+            .main-content {
+                width: 100%;
+                height: auto;
+                padding: 20px 15px;
+            }
+            .previews-container {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                max-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -498,6 +523,7 @@
             </div>
         </div>
 
+        <button class="btn" id="btn-generate" style="margin-bottom: 10px; background: linear-gradient(135deg, #00f0ff, #0072ff);"><i class="fa-solid fa-play"></i> Generate Preview</button>
         <button class="btn" id="btn-export"><i class="fa-solid fa-file-zipper"></i> Export ZIP Archive</button>
     </div>
 
@@ -655,6 +681,9 @@
 
             // Auto-Fit button
             document.getElementById('btn-autofit').addEventListener('click', autoFitSilhouette);
+
+            // Generate button
+            document.getElementById('btn-generate').addEventListener('click', updateProjections);
 
             // Export button
             document.getElementById('btn-export').addEventListener('click', exportZipArchive);

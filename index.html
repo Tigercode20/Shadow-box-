@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎨 مولد صناديق الظلال الاحترافي</title>
+    <title>🎨 مولد صناديق الظلال الاحترافي المستقر</title>
     <style>
         :root {
             --primary-color: #0070f3;
@@ -75,37 +75,28 @@
             display: inline-block;
             text-decoration: none;
         }
-
-        #loading {
-            color: #ff3b30;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
     </style>
-    <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();"></script>
 </head>
 <body>
 
 <div class="container">
-    <h2>📐 مولد صناديق الظلال الهرمي العكسي (مخطط مستقيم)</h2>
-    <p>يقوم بمط تفاصيل الشخصية داخلياً مع الحفاظ على أطراف الصندوق مستقيمة وعمودية بنسبة 100%</p>
+    <h2>📐 مولد صناديق الظلال الهرمي العكسي (مخطط مستقيم ومستقر)</h2>
+    <p>تعديل مستقر 100% يقوم بمط تفاصيل الشخصية داخلياً مع الحفاظ على أطراف الصندوق مستقيمة كصورة بلندر</p>
     
-    <div id="loading">🔄 جاري تهيئة محرك الهندسة البصرية...</div>
-
     <div class="controls">
         <div>
             <label style="font-weight:600;">📁 ارفع الصورة: </label>
-            <input type="file" id="fileInput" accept="image/*" disabled>
+            <input type="file" id="fileInput" accept="image/*">
         </div>
         
         <div class="slider-group">
-            <label for="thresholdSlider">🎚️ درجة العزل (Threshold): <span id="threshVal">115</span></label>
-            <input type="range" id="thresholdSlider" min="0" max="255" value="115" disabled>
+            <label for="thresholdSlider">🎚️ درجة العزل (Threshold): <span id="threshVal">127</span></label>
+            <input type="range" id="thresholdSlider" min="0" max="255" value="127">
         </div>
 
         <div class="slider-group">
-            <label for="skewSlider">📐 نسبة مط المنظور الداخلي: <span id="skewVal">30%</span></label>
-            <input type="range" id="skewSlider" min="5" max="60" value="30" disabled>
+            <label for="skewSlider">📐 نسبة مط المنظور الداخلي: <span id="skewVal">40%</span></label>
+            <input type="range" id="skewSlider" min="10" max="100" value="40">
         </div>
     </div>
 
@@ -122,13 +113,8 @@
     let thresholdSlider = document.getElementById('thresholdSlider');
     let skewSlider = document.getElementById('skewSlider');
     let downloadBtn = document.getElementById('downloadBtn');
-
-    function onOpenCvReady() {
-        document.getElementById('loading').style.display = 'none';
-        fileInput.disabled = false;
-        thresholdSlider.disabled = false;
-        skewSlider.disabled = false;
-    }
+    let canvas = document.getElementById('canvasOutput');
+    let ctx = canvas.getContext('2d');
 
     fileInput.addEventListener('change', (e) => {
         if(e.target.files.length > 0) {
@@ -149,130 +135,93 @@
     });
 
     function processShadowBox() {
-        if (!cv.Mat) return;
+        let w = imgElement.width;
+        let h = imgElement.height;
 
-        let src = cv.imread(imgElement);
-        let gray = new cv.Mat();
-        let binary = new cv.Mat();
+        // حساب أبعاد الصندوق والأطراف المفرودة
+        let sideW = Math.floor(w * 0.45);
+        let sideH = Math.floor(h * 0.45);
 
-        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-        cv.threshold(gray, binary, parseInt(thresholdSlider.value), 255, cv.THRESH_BINARY_INV);
+        canvas.width = w + (sideW * 2);
+        canvas.height = h + (sideH * 2);
 
-        let h = binary.rows;
-        let w = binary.cols;
+        // خلفية بيضاء بالكامل
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // تحديد أبعاد جدران الصندوق (المستطيلات)
-        let sideW = Math.floor(w * 0.4);
-        let sideH = Math.floor(h * 0.4);
-
-        // إنشاء اللوحة القماشية الكبيرة (شكل الصليب المستقيم)
-        let canvasW = w + (sideW * 2);
-        let canvasH = h + (sideH * 2);
-        let canvasMat = new cv.Mat(canvasH, canvasW, cv.CV_8UC1, new cv.Scalar(255));
-
-        // إحداثيات المربع المركزي الثابت (BOX)
+        // رسم المربع المركزي (BOX) بالرمادي
         let bx1 = sideW;
         let by1 = sideH;
-        let bx2 = bx1 + w;
-        let by2 = by1 + h;
+        ctx.fillStyle = "#e0e0e0";
+        ctx.fillRect(bx1, by1, w, h);
 
-        // رسم المربع المركزي
-        cv.rectangle(canvasMat, new cv.Point(bx1, by1), new cv.Point(bx2, by2), new cv.Scalar(230), -1);
+        // إنشاء كافاس مؤقت لتطبيق تأثير الـ Threshold (أسود وأبيض)
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = w;
+        tempCanvas.height = h;
+        let tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(imgElement, 0, 0);
 
-        // معامل مط المنظور الداخلي للرسمة
-        let skewPct = parseInt(skewSlider.value) / 100;
-        let skewShiftW = Math.floor(w * skewPct);
-        let skewShiftH = Math.floor(h * skewPct);
+        let imgData = tempCtx.getImageData(0, 0, w, h);
+        let data = imgData.data;
+        let thresh = parseInt(thresholdSlider.value);
 
-        function applyWarpAndPaste(srcCrop, srcCoords, dstCoords, dstX, dstY, dstW, dstH) {
-            let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, srcCoords);
-            let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, dstCoords);
-            let M = cv.getPerspectiveTransform(srcTri, dstTri);
-            
-            let warped = new cv.Mat();
-            cv.warpPerspective(srcCrop, warped, M, new cv.Size(dstW, dstH));
-            
-            // دمج الجزء داخل مستطيل الطرف المخصص له على اللوحة
-            let roi = canvasMat.roi(new cv.Rect(dstX, dstY, dstW, dstH));
-            warped.copyTo(roi);
+        for (let i = 0; i < data.length; i += 4) {
+            let brightness = 0.34 * data[i] + 0.5 * data[i + 1] + 0.16 * data[i + 2];
+            let val = (brightness > thresh) ? 255 : 0; // عكس الألوان ليكون قالب القص أسود
+            data[i] = val; data[i+1] = val; data[i+2] = val;
+        }
+        tempCtx.putImageData(imgData, 0, 0);
 
-            srcTri.delete(); dstTri.delete(); M.delete(); warped.delete(); roi.delete();
+        let skewFactor = parseInt(skewSlider.value) / 100;
+
+        // دالة مبتكرة لعمل سحب ومط للمنظور (Perspective Deform) سطر بسطر لضمان الاستقرار
+        function drawPerspectiveSide(sourceY, sourceH, targetX, targetY, targetW, targetH, direction) {
+            let sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = w;
+            sliceCanvas.height = sourceH;
+            let sliceCtx = sliceCanvas.getContext('2d');
+            sliceCtx.drawImage(tempCanvas, 0, sourceY, w, sourceH, 0, 0, w, sourceH);
+
+            // إنشاء تدوير للجدران لتفرد للخارج
+            ctx.save();
+            ctx.translate(targetX + targetW/2, targetY + targetH/2);
+            if (direction === 'top') ctx.rotate(Math.PI);
+            if (direction === 'left') ctx.rotate(Math.PI / 2);
+            if (direction === 'right') ctx.rotate(-Math.PI / 2);
+            ctx.translate(-targetW/2, -targetH/2);
+
+            // عملية المط التدريجي الشبيهة بالهرم العكسي
+            for (let y = 0; y < targetH; y++) {
+                let progress = y / targetH;
+                // المط يزداد كلما ابتعدنا عن المركز
+                let scale = 1 + (progress * skewFactor); 
+                let sliceW = targetW * scale;
+                let sliceX = (targetW - sliceW) / 2;
+
+                ctx.drawImage(sliceCanvas, 0, Math.floor((y/targetH) * sourceH), w, 1, sliceX, y, sliceW, 1);
+            }
+            ctx.restore();
         }
 
-        // 1. الطرف العلوي (Top) -> مستطيل مستقيم تماماً، لكن الصورة جواه ممتدة من الأعلى وضيقة من الأسفل
-        let topCrop = binary.roi(new cv.Rect(0, 0, w, sideH));
-        let tSrc = [0, 0,  w, 0,  0, topCrop.rows,  w, topCrop.rows];
-        let tDst = [
-            -skewShiftW, 0, 
-            w + skewShiftW, 0, 
-            0, topCrop.rows, 
-            w, topCrop.rows
-        ];
-        // تدوير الجزء العلوي للأعلى قبل الدمج ليطابق التخطيط المفرود
-        let topRot = new cv.Mat();
-        cv.rotate(topCrop, topRot, cv.ROTATE_180);
-        applyWarpAndPaste(topRot, tSrc, tDst, bx1, by1 - sideH, w, sideH);
-        topRot.delete(); topCrop.delete();
+        // 1. الطرف العلوي (Top)
+        drawPerspectiveSide(0, sideH, bx1, by1 - sideH, w, sideH, 'top');
 
-        // 2. الطرف السفلي (Lower) -> مستطيل مستقيم، الصورة ممتدة من الأسفل وضامّة من الأعلى
-        let botCrop = binary.roi(new cv.Rect(0, h - sideH, w, sideH));
-        let bSrc = [0, 0,  w, 0,  0, botCrop.rows,  w, botCrop.rows];
-        let bDst = [
-            0, 0, 
-            w, 0, 
-            -skewShiftW, botCrop.rows, 
-            w + skewShiftW, botCrop.rows
-        ];
-        applyWarpAndPaste(botCrop, bSrc, bDst, bx1, by2, w, sideH);
-        botCrop.delete();
+        // 2. الطرف السفلي (Lower)
+        drawPerspectiveSide(h - sideH, sideH, bx1, by1 + h, w, sideH, 'bottom');
 
-        // 3. الطرف الأيسر (Left) -> مستطيل مستقيم، ممتد من اليسار وضامّ من اليمين
-        let leftCrop = binary.roi(new cv.Rect(0, 0, sideW, h));
-        let lSrc = [0, 0,  leftCrop.cols, 0,  0, h,  leftCrop.cols, h];
-        let lDst = [
-            0, -skewShiftH, 
-            leftCrop.cols, 0, 
-            0, h + skewShiftH, 
-            leftCrop.cols, h
-        ];
-        let leftRot = new cv.Mat();
-        cv.rotate(leftCrop, leftRot, cv.ROTATE_90_COUNTERCLOCKWISE);
-        // تبديل الأبعاد لتتناسب مع التدوير
-        let lSrcRot = [0, 0,  h, 0,  0, sideW,  h, sideW];
-        let lDstRot = [
-            -skewShiftH, 0, 
-            h + skewShiftH, 0, 
-            0, sideW, 
-            h, sideW
-        ];
-        applyWarpAndPaste(leftRot, lSrcRot, lDstRot, bx1 - h, by1, h, sideW);
-        leftRot.delete(); leftCrop.delete();
+        // 3. الطرف الأيسر (Left) - نقوم بقص الجزء الأيسر ومطه بالتناسب بعد تعديل الأبعاد للتدوير
+        drawPerspectiveSide(0, h, bx1 - sideW, by1, sideW, h, 'left');
 
-        // 4. الطرف الأيمن (Right) -> مستطيل مستقيم، ضامّ من اليسار وممتد من اليمين
-        let rightCrop = binary.roi(new cv.Rect(w - sideW, 0, sideW, h));
-        let rightRot = new cv.Mat();
-        cv.rotate(rightCrop, rightRot, cv.ROTATE_90_CLOCKWISE);
-        let rSrcRot = [0, 0,  h, 0,  0, sideW,  h, sideW];
-        let rDstRot = [
-            0, 0, 
-            h, 0, 
-            -skewShiftH, sideW, 
-            h + skewShiftH, sideW
-        ];
-        applyWarpAndPaste(rightRot, rSrcRot, rDstRot, bx2, by1, h, sideW);
-        rightRot.delete(); rightCrop.delete();
+        // 4. الطرف الأيمن (Right)
+        drawPerspectiveSide(0, h, bx1 + w, by1, sideW, h, 'right');
 
-
-        cv.imshow('canvasOutput', canvasMat);
         downloadBtn.style.display = 'inline-block';
-
-        src.delete(); gray.delete(); binary.delete(); canvasMat.delete();
     }
 
     downloadBtn.addEventListener('click', () => {
-        let canvas = document.getElementById('canvasOutput');
         let link = document.createElement('a');
-        link.download = 'perfect-box-layout.png';
+        link.download = 'perfect-shadow-box.png';
         link.href = canvas.toDataURL("image/png");
         link.click();
     });

@@ -1,232 +1,1197 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎨 مولد صناديق الظلال المطابق لـ Blender</title>
+    <title>📐 Premium 3D Shadow Box Maker</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- JSZip Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
     <style>
         :root {
-            --primary-color: #0070f3;
-            --bg-color: #f5f5f7;
-            --panel-bg: #ffffff;
+            --primary: #00f0ff;
+            --primary-glow: rgba(0, 240, 255, 0.4);
+            --bg-radial: radial-gradient(circle at 50% 50%, #1e1e26, #0e0e12);
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f0f0f5;
+            --text-muted: #8a8a9e;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 20px;
-            direction: rtl;
-        }
-
-        .container {
-            max-width: 900px;
-            background: var(--panel-bg);
-            margin: 0 auto;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            text-align: center;
-        }
-
-        .controls {
-            background: #fafafa;
-            padding: 20px;
-            border-radius: 12px;
-            margin: 20px 0;
+            background: var(--bg-radial);
+            color: var(--text-main);
+            min-height: 100vh;
             display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-            align-items: center;
-            border: 1px solid #eaeaea;
+            overflow-x: hidden;
         }
 
-        .slider-group {
+        /* Loading Screen */
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #0e0e12;
+            z-index: 9999;
             display: flex;
             flex-direction: column;
-            align-items: flex-start;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 70px;
+            height: 70px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: var(--text-main);
+        }
+
+        /* App Layout */
+        .sidebar {
+            width: 380px;
+            height: 100vh;
+            background: rgba(14, 14, 18, 0.95);
+            border-right: 1px solid var(--card-border);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        .main-content {
+            flex: 1;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        /* Typography & Headings */
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #00f0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Forms & Inputs */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
             gap: 5px;
         }
 
-        input[type="range"] {
-            width: 200px;
+        .input-group.full-width {
+            grid-column: span 2;
+        }
+
+        label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="number"], input[type="text"] {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            color: var(--text-main);
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input[type="number"]:focus, input[type="text"]:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+        }
+
+        /* File Upload */
+        .file-upload-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            background: rgba(0, 240, 255, 0.05);
+            border: 1px dashed var(--primary);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-btn:hover {
+            background: rgba(0, 240, 255, 0.1);
+        }
+
+        .file-upload-btn i {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        /* Checkboxes & Radios */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            accent-color: var(--primary);
+            width: 16px;
+            height: 16px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 0.85rem;
+        }
+
+        .radio-option input[type="radio"] {
+            accent-color: var(--primary);
+        }
+
+        /* Sliders */
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .slider-wrapper input[type="range"] {
+            flex: 1;
+            accent-color: var(--primary);
+        }
+
+        .slider-val {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--primary);
+            width: 45px;
+            text-align: right;
+        }
+
+        /* Action Buttons */
+        .btn {
+            background: linear-gradient(135deg, #00f0ff, #0072ff);
+            color: #0e0e12;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0, 240, 255, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 240, 255, 0.4);
+        }
+
+        .btn.btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+            box-shadow: none;
+        }
+
+        .btn.btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
+        }
+
+        /* Layout Preview Columns */
+        .previews-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .preview-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .preview-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .canvas-container {
+            width: 100%;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #121217;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            overflow: hidden;
+            position: relative;
         }
 
         canvas {
             max-width: 100%;
-            height: auto;
-            border: 2px dashed #ccc;
-            border-radius: 8px;
-            margin-top: 20px;
-            background: #fff;
-        }
-
-        .btn {
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            margin-top: 15px;
-            display: inline-block;
-            text-decoration: none;
+            max-height: 100%;
+            object-fit: contain;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>📐 مولد صناديق الظلال (Linear Stretch)</h2>
-    <p>مطابق تماماً لنموذج بلندر - يقوم بقص وفرد الجدران مع مط التفاصيل بشكل مستقيم ونظيف</p>
-    
-    <div class="controls">
+    <!-- Loading Screen overlay -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">LOADING OPENCV.JS CORE ENGINE...</div>
+        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:10px;">Please wait while the computer graphics library initializes.</div>
+    </div>
+
+    <!-- Sidebar controls -->
+    <div class="sidebar">
         <div>
-            <label style="font-weight:600;">📁 ارفع الصورة: </label>
-            <input type="file" id="fileInput" accept="image/*">
+            <h1><i class="fa-solid fa-cube"></i> Shadow Box Maker</h1>
+            <div class="subtitle">3D-unfolded projection matched to Blender parameters</div>
         </div>
+
+        <!-- 1. Input Image -->
+        <div class="card">
+            <div class="section-title"><i class="fa-solid fa-image"></i> 1. Input Silhouette Image</div>
+            <label class="file-upload-btn" for="imageFileInput">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span id="upload-label">Browse Silhouette Image</span>
+            </label>
+            <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+        </div>
+
+        <!-- 2. Box Dimensions -->
+        <div class="card">
+            <div class="section-title"><i class="fa-solid fa-ruler-combined"></i> 2. Box Dimensions (mm)</div>
+            <div class="form-grid">
+                <div class="input-group">
+                    <label>Width (X)</label>
+                    <input type="number" id="box_w" value="413.6" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Height (Y)</label>
+                    <input type="number" id="box_h" value="435.5" step="0.1">
+                </div>
+                <div class="input-group full-width">
+                    <label>Depth (Z)</label>
+                    <input type="number" id="box_d" value="200.0" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Optical Settings -->
+        <div class="card">
+            <div class="section-title"><i class="fa-solid fa-lightbulb"></i> 3. Optical & Target Wall (mm)</div>
+            <div class="form-grid">
+                <div class="input-group">
+                    <label>Light Source Z</label>
+                    <input type="number" id="light_z" value="280.0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Front Opening Z</label>
+                    <input type="number" id="front_z" value="80.0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Target Width</label>
+                    <input type="number" id="target_w" value="1500.0" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Target Height</label>
+                    <input type="number" id="target_h" value="1600.0" step="0.1">
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Image Adjustment -->
+        <div class="card">
+            <div class="section-title"><i class="fa-solid fa-sliders"></i> 4. Image Adjustment</div>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div class="input-group">
+                    <label>Scale (%)</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="img_scale" min="10" max="500" value="150">
+                        <span class="slider-val" id="val_img_scale">150%</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Shift X (mm)</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="offset_x" min="-500" max="500" value="0">
+                        <span class="slider-val" id="val_offset_x">0</span>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Shift Y (mm)</label>
+                    <div class="slider-wrapper">
+                        <input type="range" id="offset_y" min="-500" max="500" value="100">
+                        <span class="slider-val" id="val_offset_y">100</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="btn-autofit"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Fit Silhouette</button>
+            </div>
+        </div>
+
+        <!-- 5. Settings -->
+        <div class="card">
+            <div class="section-title"><i class="fa-solid fa-gears"></i> 5. Settings</div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="input-group">
+                    <label>Resolution (pixels/mm)</label>
+                    <input type="number" id="res_val" value="2.0" step="0.1">
+                </div>
+                
+                <div class="input-group">
+                    <label>Panel Type</label>
+                    <label class="radio-option">
+                        <input type="radio" name="panel_type" value="255" checked>
+                        <span>Cutout (White bg / Solid cuts)</span>
+                    </label>
+                    <label class="radio-option">
+                        <input type="radio" name="panel_type" value="0">
+                        <span>Solid (Black bg / Cutout holes)</span>
+                    </label>
+                </div>
+
+                <div class="input-group" style="border-top: 1px solid var(--card-border); padding-top: 10px;">
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="use_edges">
+                        <span>Outline Mode (Canny Edges)</span>
+                    </label>
+                </div>
+
+                <div class="form-grid" id="canny_params_frame" style="display: none;">
+                    <div class="input-group">
+                        <label>Thresh 1</label>
+                        <input type="number" id="thresh1" value="50">
+                    </div>
+                    <div class="input-group">
+                        <label>Thresh 2</label>
+                        <input type="number" id="thresh2" value="150">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="use_custom_shape" checked>
+                        <span>Custom Panel Shape (Silhouette)</span>
+                    </label>
+                </div>
+
+                <div class="input-group">
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="draw_slits">
+                        <span>Add Alignment Slits (Mortise)</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn" id="btn-export"><i class="fa-solid fa-file-zipper"></i> Export ZIP Archive</button>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="main-content">
+        <div class="previews-container">
+            <!-- Target Preview -->
+            <div class="preview-box">
+                <div class="preview-title"><i class="fa-solid fa-bullseye"></i> Preprocessed Target Silhouette</div>
+                <div class="canvas-container">
+                    <canvas id="canvasTargetPreview"></canvas>
+                </div>
+            </div>
+
+            <!-- Unfolded Layout Preview -->
+            <div class="preview-box">
+                <div class="preview-title"><i class="fa-solid fa-map"></i> Unfolded 3D Lamp Cross Template</div>
+                <div class="canvas-container">
+                    <canvas id="canvasCrossPreview"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- OpenCV Module Script Load -->
+    <script>
+        var Module = {
+            onRuntimeInitialized: function() {
+                console.log("OpenCV.js core successfully initialized.");
+                document.getElementById("loading-overlay").style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById("loading-overlay").style.display = "none";
+                }, 500);
+                
+                // Initialize default image and process layout
+                initApp();
+            }
+        };
+    </script>
+    <script async src="https://docs.opencv.org/4.5.4/opencv.js" type="text/javascript"></script>
+
+    <!-- Custom Script Logic -->
+    <script>
+        let rawTargetImage = null; // HTML Canvas or Image holding the raw uploaded image
+        let preprocessedTargetMat = null; // OpenCV Mat holding the preprocessed grayscale target
         
-        <div class="slider-group">
-            <label for="thresholdSlider">🎚️ درجة العزل (Threshold): <span id="threshVal">127</span></label>
-            <input type="range" id="thresholdSlider" min="0" max="255" value="127">
-        </div>
+        let wallLeft = null;
+        let wallRight = null;
+        let wallTop = null;
+        let wallBottom = null;
+        let crossLayout = null; // HTML Canvas showing cross layout
 
-        <div class="slider-group">
-            <label for="stretchSlider">📐 نسبة مَطْ الأطراف (Stretch): <span id="stretchVal">40%</span></label>
-            <input type="range" id="stretchSlider" min="10" max="100" value="40">
-        </div>
-    </div>
-
-    <div>
-        <canvas id="canvasOutput"></canvas>
-    </div>
-    
-    <button class="btn" id="downloadBtn" style="display:none;">💾 تحميل المخطط النهائي</button>
-</div>
-
-<script>
-    let imgElement = new Image();
-    let fileInput = document.getElementById('fileInput');
-    let thresholdSlider = document.getElementById('thresholdSlider');
-    let stretchSlider = document.getElementById('stretchSlider');
-    let downloadBtn = document.getElementById('downloadBtn');
-    let canvas = document.getElementById('canvasOutput');
-    let ctx = canvas.getContext('2d');
-
-    fileInput.addEventListener('change', (e) => {
-        if(e.target.files.length > 0) {
-            let reader = new FileReader();
-            reader.onload = (event) => { imgElement.src = event.target.result; };
-            reader.readAsDataURL(e.target.files[0]);
-        }
-    });
-
-    imgElement.onload = () => { processShadowBox(); };
-    thresholdSlider.addEventListener('input', () => {
-        document.getElementById('threshVal').innerText = thresholdSlider.value;
-        if(imgElement.src) processShadowBox();
-    });
-    stretchSlider.addEventListener('input', () => {
-        document.getElementById('stretchVal').innerText = stretchSlider.value + "%";
-        if(imgElement.src) processShadowBox();
-    });
-
-    function processShadowBox() {
-        let w = imgElement.width;
-        let h = imgElement.height;
-
-        // تحديد أبعاد الصندوق الداخلي بدقة (BOX)
-        let boxW = Math.floor(w * 0.45);
-        let boxH = Math.floor(h * 0.55);
-
-        // حجم الأطراف (الجدران المفرودة المستقيمة)
-        let sideH = Math.floor(h * 0.35); 
-        let sideW = Math.floor(w * 0.35);
-
-        canvas.width = boxW + (sideW * 2);
-        canvas.height = boxH + (sideH * 2);
-
-        let bx1 = sideW;
-        let by1 = sideH;
-
-        // 1. رسم أرضية الهيكل الرمادي كقطعة واحدة متصلة تماماً مثل بلندر
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        ctx.fillStyle = "#b0b3b8"; // لون جدران الصندوق الرمادي
-        ctx.fillRect(bx1, 0, boxW, canvas.height); // الجذع الطولي
-        ctx.fillRect(0, by1, canvas.width, boxH);  // الجذع العرضي
-
-        // 2. معالجة صورة الـ Threshold (أسود وأبيض)
-        let tempCanvas = document.createElement('canvas');
-        tempCanvas.width = w;
-        tempCanvas.height = h;
-        let tempCtx = tempCanvas.getContext('2d');
-        tempCtx.drawImage(imgElement, 0, 0);
-
-        let imgData = tempCtx.getImageData(0, 0, w, h);
-        let data = imgData.data;
-        let thresh = parseInt(thresholdSlider.value);
-
-        for (let i = 0; i < data.length; i += 4) {
-            let brightness = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            let val = (brightness > thresh) ? 255 : 0; // أسود للشخصية وأبيض للخلفية
-            data[i] = val; data[i+1] = val; data[i+2] = val;
-        }
-        tempCtx.putImageData(imgData, 0, 0);
-
-        // نسبة مط الأطراف المستقيمة
-        let stretchFactor = 1 + (parseInt(stretchSlider.value) / 100);
-
-        // دالة مخصصة لعمل قطع ومط خطي مستقيم للأطراف الأربعة (بدون تشويه زوايا)
-        function drawLinearSide(srcX, srcY, srcW, srcH, targetX, targetY, targetW, targetH, rotation) {
-            ctx.save();
+        function initApp() {
+            // Create default silhouette image
+            rawTargetImage = generateDefaultSilhouette();
             
-            // قناع لمنع خروج التفاصيل من الجدار المخصص لها
+            // Set listeners
+            setupEventListeners();
+            
+            // Initial render
+            updateProjections();
+        }
+
+        function generateDefaultSilhouette() {
+            let canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 800;
+            let ctx = canvas.getContext('2d');
+            
+            // White background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 600, 800);
+            
+            // Draw a default human-like bust silhouette
+            ctx.fillStyle = '#000000';
+            // Head
             ctx.beginPath();
-            ctx.rect(targetX, targetY, targetW, targetH);
-            ctx.clip();
-
-            ctx.translate(targetX + targetW/2, targetY + targetH/2);
-            ctx.rotate(rotation);
-            ctx.translate(-targetW/2, -targetH/2);
-
-            // رسم ومط الصورة بشكل مستقيم (Linear Scale)
-            ctx.drawImage(tempCanvas, srcX, srcY, srcW, srcH, 0, 0, targetW, targetH * stretchFactor);
+            ctx.arc(300, 250, 80, 0, Math.PI * 2);
+            ctx.fill();
             
-            ctx.restore();
+            // Body
+            ctx.beginPath();
+            ctx.ellipse(300, 480, 160, 150, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Arms
+            ctx.beginPath();
+            ctx.ellipse(180, 580, 80, 120, Math.PI/6, 0, Math.PI * 2);
+            ctx.ellipse(420, 580, 80, 120, -Math.PI/6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eyes & mouth (cutout)
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(270, 240, 10, 0, Math.PI, true);
+            ctx.arc(330, 240, 10, 0, Math.PI, true);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.arc(300, 270, 30, 0.1 * Math.PI, 0.9 * Math.PI);
+            ctx.stroke();
+            
+            return canvas;
         }
 
-        // 3. توزيع التفاصيل داخل الأطراف مع مراعاة التدوير الصحيح للخارج
-        // الطرف العلوي (الرأس) - مط عمودي للأعلى
-        drawLinearSide(Math.floor(w*0.27), 0, boxW, sideH, bx1, 0, boxW, sideH, Math.PI);
+        function setupEventListeners() {
+            // File input loader
+            document.getElementById('imageFileInput').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    let reader = new FileReader();
+                    reader.onload = function(event) {
+                        let img = new Image();
+                        img.onload = function() {
+                            let tempCanvas = document.createElement('canvas');
+                            tempCanvas.width = img.width;
+                            tempCanvas.height = img.height;
+                            let tempCtx = tempCanvas.getContext('2d');
+                            tempCtx.drawImage(img, 0, 0);
+                            rawTargetImage = tempCanvas;
+                            document.getElementById('upload-label').innerText = e.target.files[0].name;
+                            updateProjections();
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            });
 
-        // الطرف السفلي (اليد) - مط عمودي للأسفل
-        drawLinearSide(Math.floor(w*0.27), h - sideH, boxW, sideH, bx1, by1 + boxH, boxW, sideH, 0);
+            // Sliders real-time update
+            let sliders = ['img_scale', 'offset_x', 'offset_y'];
+            sliders.forEach(id => {
+                let elem = document.getElementById(id);
+                elem.addEventListener('input', function() {
+                    let suffix = (id === 'img_scale') ? '%' : ' mm';
+                    document.getElementById('val_' + id).innerText = elem.value + suffix;
+                    updateProjections();
+                });
+            });
 
-        // الطرف الأيسر (الذراع الأيسر) - مط أفقي لليسار
-        drawLinearSide(0, Math.floor(h*0.22), sideW, boxH, 0, by1, sideW, boxH, Math.PI / 2);
+            // Toggle edge params view
+            document.getElementById('use_edges').addEventListener('change', function(e) {
+                document.getElementById('canny_params_frame').style.display = e.target.checked ? 'grid' : 'none';
+                updateProjections();
+            });
 
-        // الطرف الأيمن (الذراع الأيمن) - مط أفقي لليمين
-        drawLinearSide(w - sideW, Math.floor(h*0.22), sideW, boxH, bx1 + boxW, by1, sideW, boxH, -Math.PI / 2);
+            // Automatic trigger for checkbuttons & input adjustments
+            let autoTriggers = ['box_w', 'box_h', 'box_d', 'light_z', 'front_z', 'target_w', 'target_h', 'res_val', 'use_custom_shape', 'draw_slits', 'thresh1', 'thresh2'];
+            autoTriggers.forEach(id => {
+                document.getElementById(id).addEventListener('change', updateProjections);
+            });
+            document.querySelectorAll('input[name="panel_type"]').forEach(radio => {
+                radio.addEventListener('change', updateProjections);
+            });
 
-        // 4. جعل المربع المركزي (أرضية الصندوق) مفرغاً باللون الرمادي الداكن تماماً كصورة بلندر
-        ctx.fillStyle = "#3a3d42"; 
-        ctx.fillRect(bx1, by1, boxW, boxH);
+            // Auto-Fit button
+            document.getElementById('btn-autofit').addEventListener('click', autoFitSilhouette);
 
-        downloadBtn.style.display = 'inline-block';
-    }
+            // Export button
+            document.getElementById('btn-export').addEventListener('click', exportZipArchive);
+        }
 
-    downloadBtn.addEventListener('click', () => {
-        let link = document.createElement('a');
-        link.download = 'blender-matched-shadowbox.png';
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-    });
-</script>
+        // OpenCV pre-processing logic
+        function preprocessSilhouette(srcMat, target_w_mm, target_h_mm, use_edges, thresh1, thresh2, use_custom_shape) {
+            let binary = new cv.Mat();
+            let target_aspect = target_w_mm / target_h_mm;
+            
+            if (use_custom_shape) {
+                let smoothed = new cv.Mat();
+                cv.bilateralFilter(srcMat, smoothed, 9, 75, 75);
+                
+                let thresh = new cv.Mat();
+                cv.threshold(smoothed, thresh, 100, 255, cv.THRESH_BINARY_INV);
+                
+                let contours = new cv.MatVector();
+                let hierarchy = new cv.Mat();
+                cv.findContours(thresh, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                
+                let body_mask = cv.Mat.zeros(srcMat.rows, srcMat.cols, cv.CV_8UC1);
+                if (contours.size() > 0) {
+                    let max_idx = 0;
+                    let max_area = 0;
+                    for (let i = 0; i < contours.size(); i++) {
+                        let area = cv.contourArea(contours.get(i));
+                        if (area > max_area) {
+                            max_area = area;
+                            max_idx = i;
+                        }
+                    }
+                    
+                    let color = new cv.Scalar(255);
+                    cv.drawContours(body_mask, contours, max_idx, color, -1, cv.LINE_8, hierarchy, 0);
+                    
+                    let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(25, 25));
+                    cv.morphologyEx(body_mask, body_mask, cv.MORPH_CLOSE, kernel);
+                }
+                
+                // Selective vertical grounding for middle 55% of the body width
+                let h_mask = body_mask.rows;
+                let w_mask = body_mask.cols;
+                let cols_sum = new Int32Array(w_mask);
+                for (let c = 0; c < w_mask; c++) {
+                    let sum = 0;
+                    for (let r = 0; r < h_mask; r++) {
+                        if (body_mask.ucharAt(r, c) > 0) {
+                            sum += 1;
+                        }
+                    }
+                    cols_sum[c] = sum;
+                }
+                
+                let c_min = -1, c_max = -1;
+                for (let c = 0; c < w_mask; c++) {
+                    if (cols_sum[c] > 0) {
+                        if (c_min === -1) c_min = c;
+                        c_max = c;
+                    }
+                }
+                
+                if (c_min !== -1) {
+                    let span_w = c_max - c_min;
+                    let start_c = Math.round(c_min + 0.225 * span_w);
+                    let end_c = Math.round(c_min + 0.775 * span_w);
+                    
+                    for (let c = start_c; c < end_c; c++) {
+                        let r_max = -1;
+                        for (let r = h_mask - 1; r >= 0; r--) {
+                            if (body_mask.ucharAt(r, c) > 0) {
+                                r_max = r;
+                                break;
+                            }
+                        }
+                        if (r_max !== -1) {
+                            for (let r = r_max; r < h_mask; r++) {
+                                body_mask.setUCharAt(r, c, 255);
+                            }
+                        }
+                    }
+                }
+                
+                let edges = new cv.Mat();
+                cv.Canny(smoothed, edges, thresh1, thresh2);
+                let kernel_edge = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+                cv.dilate(edges, edges, kernel_edge);
+                
+                let body_minus_edges = new cv.Mat();
+                cv.subtract(body_mask, edges, body_minus_edges);
+                cv.bitwise_not(body_minus_edges, binary);
+                
+                smoothed.delete(); thresh.delete(); contours.delete(); hierarchy.delete(); body_mask.delete(); edges.delete();
+            } else if (use_edges) {
+                let smoothed = new cv.Mat();
+                cv.bilateralFilter(srcMat, smoothed, 9, 75, 75);
+                let edges = new cv.Mat();
+                cv.Canny(smoothed, edges, thresh1, thresh2);
+                let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+                cv.dilate(edges, edges, kernel);
+                cv.bitwise_not(edges, binary);
+                
+                smoothed.delete(); edges.delete();
+            } else {
+                cv.threshold(srcMat, binary, 127, 255, cv.THRESH_BINARY);
+            }
+            
+            // Pad to target aspect ratio
+            let img_h = binary.rows;
+            let img_w = binary.cols;
+            let img_aspect = img_w / img_h;
+            
+            let padded;
+            if (img_aspect > target_aspect) {
+                let new_h = Math.round(img_w / target_aspect);
+                let pad = Math.round((new_h - img_h) / 2);
+                padded = new cv.Mat(new_h, img_w, cv.CV_8UC1, new cv.Scalar(255));
+                
+                let rect = new cv.Rect(0, pad, img_w, img_h);
+                let roi = padded.roi(rect);
+                binary.copyTo(roi);
+                roi.delete();
+            } else {
+                let new_w = Math.round(img_h * target_aspect);
+                let pad = Math.round((new_w - img_w) / 2);
+                padded = new cv.Mat(img_h, new_w, cv.CV_8UC1, new cv.Scalar(255));
+                
+                let rect = new cv.Rect(pad, 0, img_w, img_h);
+                let roi = padded.roi(rect);
+                binary.copyTo(roi);
+                roi.delete();
+            }
+            
+            binary.delete();
+            return padded;
+        }
 
+        // Backward Ray Tracing math projection
+        function projectWallPanel(wall_name, targetImgData, target_w_mm, target_h_mm, box_w, box_h, box_d, Z_start, Z_end, Z_light, pixels_per_mm, panel_bg, scale_factor, offset_x, offset_y) {
+            let W_res = Math.round(box_w * pixels_per_mm);
+            let H_res = Math.round(box_h * pixels_per_mm);
+            let D_res = Math.round(box_d * pixels_per_mm);
+            
+            let w, h;
+            if (wall_name === 'left' || wall_name === 'right') {
+                w = D_res;
+                h = H_res;
+            } else {
+                w = W_res;
+                h = D_res;
+            }
+            
+            let panelData = new Uint8Array(w * h);
+            panelData.fill(panel_bg);
+            
+            let tgt_w = targetImgData.width;
+            let tgt_h = targetImgData.height;
+            let tgt_pixels = targetImgData.data;
+            
+            for (let r = 0; r < h; r++) {
+                for (let c = 0; c < w; c++) {
+                    let X_wall, Y_wall, Z_wall;
+                    
+                    if (wall_name === 'left') {
+                        Z_wall = Z_end - (c / (D_res - 1)) * box_d;
+                        Y_wall = box_h / 2.0 - (r / (H_res - 1)) * box_h;
+                        X_wall = -box_w / 2.0;
+                    } else if (wall_name === 'right') {
+                        Z_wall = Z_end - (c / (D_res - 1)) * box_d;
+                        Y_wall = box_h / 2.0 - (r / (H_res - 1)) * box_h;
+                        X_wall = box_w / 2.0;
+                    } else if (wall_name === 'top') {
+                        X_wall = -box_w / 2.0 + (c / (W_res - 1)) * box_w;
+                        Z_wall = Z_end - (r / (D_res - 1)) * box_d;
+                        Y_wall = box_h / 2.0;
+                    } else if (wall_name === 'bottom') {
+                        X_wall = -box_w / 2.0 + (c / (W_res - 1)) * box_w;
+                        Z_wall = Z_end - (r / (D_res - 1)) * box_d;
+                        Y_wall = -box_h / 2.0;
+                    }
+                    
+                    if (Z_wall >= Z_light) continue;
+                    
+                    let denom = Z_light - Z_wall;
+                    let t = Z_light / denom;
+                    
+                    let X_w = X_wall * t;
+                    let Y_w = Y_wall * t;
+                    
+                    let X_w_trans = (X_w - offset_x) / scale_factor;
+                    let Y_w_trans = (Y_w - offset_y) / scale_factor;
+                    
+                    let col_tgt = Math.round((X_w_trans + target_w_mm / 2.0) / target_w_mm * (tgt_w - 1));
+                    let row_tgt = Math.round(((target_h_mm / 2.0) - Y_w_trans) / target_h_mm * (tgt_h - 1));
+                    
+                    if (col_tgt >= 0 && col_tgt < tgt_w && row_tgt >= 0 && row_tgt < tgt_h) {
+                        let idx = (row_tgt * tgt_w + col_tgt) * 4;
+                        panelData[r * w + c] = tgt_pixels[idx]; // Sample R channel
+                    }
+                }
+            }
+            
+            if (panel_bg === 0) {
+                for (let i = 0; i < panelData.length; i++) {
+                    panelData[i] = 255 - panelData[i];
+                }
+            }
+            
+            return { data: panelData, width: w, height: h };
+        }
+
+        // Assemble 4 panels and base plate into a cross layout canvas
+        function assembleCrossFoldLayout(left, right, top, bottom, box_w, box_h, box_d, pixels_per_mm, panel_bg, draw_slits) {
+            let W_res = Math.round(box_w * pixels_per_mm);
+            let H_res = Math.round(box_h * pixels_per_mm);
+            let D_res = Math.round(box_d * pixels_per_mm);
+            
+            let canvas_w = 2 * D_res + W_res;
+            let canvas_h = 2 * D_res + H_res;
+            
+            let canvas = document.createElement('canvas');
+            canvas.width = canvas_w;
+            canvas.height = canvas_h;
+            let ctx = canvas.getContext('2d');
+            
+            // White canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas_w, canvas_h);
+            
+            // Base plate
+            let base_x_start = D_res;
+            let base_y_start = D_res;
+            let base_x_end = D_res + W_res;
+            let base_y_end = D_res + H_res;
+            
+            ctx.fillStyle = '#f0f0f5';
+            ctx.fillRect(base_x_start, base_y_start, W_res, H_res);
+            
+            // Draw base plate border
+            ctx.strokeStyle = '#646473';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(base_x_start, base_y_start, W_res, H_res);
+            
+            // Center LED circular hole
+            let center_x = base_x_start + Math.floor(W_res / 2);
+            let center_y = base_y_start + Math.floor(H_res / 2);
+            ctx.fillStyle = '#32323c';
+            ctx.beginPath();
+            ctx.arc(center_x, center_y, Math.round(5 * pixels_per_mm), 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Helper to draw panel data onto canvas
+            function drawPanel(panel, dx, dy, flipCode) {
+                let p = panel;
+                if (flipCode !== undefined) {
+                    p = cvFlip(panel, flipCode);
+                }
+                let imgData = ctx.createImageData(p.width, p.height);
+                for (let i = 0; i < p.data.length; i++) {
+                    let val = p.data[i];
+                    imgData.data[i * 4] = val;
+                    imgData.data[i * 4 + 1] = val;
+                    imgData.data[i * 4 + 2] = val;
+                    imgData.data[i * 4 + 3] = 255;
+                }
+                ctx.putImageData(imgData, dx, dy);
+            }
+            
+            function cvFlip(panel, flipCode) {
+                let w = panel.width;
+                let h = panel.height;
+                let src = panel.data;
+                let dst = new Uint8Array(w * h);
+                for (let r = 0; r < h; r++) {
+                    for (let c = 0; c < w; c++) {
+                        let src_r = r;
+                        let src_c = c;
+                        if (flipCode === 0) src_r = h - 1 - r;
+                        else if (flipCode === 1) src_c = w - 1 - c;
+                        dst[r * w + c] = src[src_r * w + src_c];
+                    }
+                }
+                return { data: dst, width: w, height: h };
+            }
+            
+            // Copy panels
+            drawPanel(top, base_x_start, 0);
+            drawPanel(bottom, base_x_start, base_y_end, 0); // Flipped vertically
+            drawPanel(left, 0, base_y_start);
+            drawPanel(right, base_x_end, base_y_start, 1); // Flipped horizontally
+            
+            // Dashed fold lines
+            ctx.setLineDash([5, 5]);
+            ctx.strokeStyle = '#7f7f8c';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.moveTo(base_x_start, base_y_start);
+            ctx.lineTo(base_x_end, base_y_start);
+            ctx.moveTo(base_x_start, base_y_end);
+            ctx.lineTo(base_x_end, base_y_end);
+            ctx.moveTo(base_x_start, base_y_start);
+            ctx.lineTo(base_x_start, base_y_end);
+            ctx.moveTo(base_x_end, base_y_start);
+            ctx.lineTo(base_x_end, base_y_end);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset
+            
+            // Outer borders
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, 0, canvas_w, canvas_h);
+            
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, base_y_start); ctx.lineTo(base_x_start, base_y_start);
+            ctx.moveTo(0, base_y_end); ctx.lineTo(base_x_start, base_y_end);
+            ctx.moveTo(base_x_end, base_y_start); ctx.lineTo(canvas_w, base_y_start);
+            ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(canvas_w, base_y_end);
+            
+            ctx.moveTo(base_x_start, 0); ctx.lineTo(base_x_start, base_y_start);
+            ctx.moveTo(base_x_end, 0); ctx.lineTo(base_x_end, base_y_start);
+            ctx.moveTo(base_x_start, base_y_end); ctx.lineTo(base_x_start, canvas_h);
+            ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(base_x_end, canvas_h);
+            ctx.stroke();
+            
+            // Alignment slits (mortise slots)
+            if (draw_slits) {
+                let slit_w = Math.max(1, Math.round(3 * pixels_per_mm));
+                let slit_l = Math.max(1, Math.round(30 * pixels_per_mm));
+                ctx.fillStyle = (panel_bg === 255) ? '#ffffff' : '#000000';
+                
+                // Top
+                ctx.fillRect(center_x - Math.floor(slit_w/2), base_y_start - Math.floor(slit_l/2), slit_w, slit_l);
+                // Bottom
+                ctx.fillRect(center_x - Math.floor(slit_w/2), base_y_end - Math.floor(slit_l/2), slit_w, slit_l);
+                // Left
+                ctx.fillRect(base_x_start - Math.floor(slit_l/2), center_y - Math.floor(slit_w/2), slit_l, slit_w);
+                // Right
+                ctx.fillRect(base_x_end - Math.floor(slit_l/2), center_y - Math.floor(slit_w/2), slit_l, slit_w);
+            }
+            
+            // Draw labels
+            ctx.fillStyle = '#8a8a9e';
+            ctx.font = '14px Outfit';
+            ctx.fillText("LEFT WALL", 20, center_y + 5);
+            ctx.fillText("RIGHT WALL", base_x_end + 20, center_y + 5);
+            ctx.fillText("TOP WALL", base_x_start + 20, 30);
+            ctx.fillText("BOTTOM WALL", base_x_start + 20, base_y_end + 30);
+            
+            return canvas;
+        }
+
+        // Global function to trigger projections & render
+        function updateProjections() {
+            if (!rawTargetImage || typeof cv === 'undefined' || !cv.Mat) return;
+            
+            // Parse dimensions
+            let box_w = parseFloat(document.getElementById('box_w').value);
+            let box_h = parseFloat(document.getElementById('box_h').value);
+            let box_d = parseFloat(document.getElementById('box_d').value);
+            let light_z = parseFloat(document.getElementById('light_z').value);
+            let front_z = parseFloat(document.getElementById('front_z').value);
+            let target_w = parseFloat(document.getElementById('target_w').value);
+            let target_h = parseFloat(document.getElementById('target_h').value);
+            let res = parseFloat(document.getElementById('res_val').value);
+            
+            let panel_bg = parseInt(document.querySelector('input[name="panel_type"]:checked').value);
+            let use_edges = document.getElementById('use_edges').checked;
+            let thresh1 = parseInt(document.getElementById('thresh1').value);
+            let thresh2 = parseInt(document.getElementById('thresh2').value);
+            let use_custom_shape = document.getElementById('use_custom_shape').checked;
+            let draw_slits = document.getElementById('draw_slits').checked;
+            
+            let img_scale = parseFloat(document.getElementById('img_scale').value) / 100.0;
+            let offset_x = parseFloat(document.getElementById('offset_x').value);
+            let offset_y = parseFloat(document.getElementById('offset_y').value);
+            
+            // 1. Create target OpenCV mat
+            let src = cv.imread(rawTargetImage);
+            let srcGray = new cv.Mat();
+            cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+            
+            // 2. Preprocess target
+            let preprocessedMat = preprocessSilhouette(srcGray, target_w, target_h, use_edges, thresh1, thresh2, use_custom_shape);
+            
+            // 3. Render target preview on canvas
+            let canvasTarget = document.getElementById('canvasTargetPreview');
+            cv.imshow(canvasTarget, preprocessedMat);
+            
+            // Convert preprocessedMat to target image data for pixel sampling
+            let tempCanvas = document.createElement('canvas');
+            cv.imshow(tempCanvas, preprocessedMat);
+            let targetImgData = tempCanvas.getContext('2d').getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // 4. Compute 4 walls
+            wallLeft = projectWallPanel('left', targetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                        front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+            wallRight = projectWallPanel('right', targetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                         front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+            wallTop = projectWallPanel('top', targetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                       front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+            wallBottom = projectWallPanel('bottom', targetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                          front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+            
+            // 5. Assemble unfolded cross template
+            let crossCanvas = assembleCrossFoldLayout(wallLeft, wallRight, wallTop, wallBottom, 
+                                                     box_w, box_h, box_d, res, panel_bg, draw_slits);
+            
+            // Show cross layout in preview canvas
+            let canvasCross = document.getElementById('canvasCrossPreview');
+            canvasCross.width = crossCanvas.width;
+            canvasCross.height = crossCanvas.height;
+            let crossCtx = canvasCross.getContext('2d');
+            crossCtx.drawImage(crossCanvas, 0, 0);
+            
+            // Save layout raw for ZIP export
+            crossLayout = crossCanvas;
+            
+            // Clean up
+            src.delete(); srcGray.delete(); preprocessedMat.delete();
+        }
+
+        // Automatic contour analysis to calculate image scale and offset Y
+        function autoFitSilhouette() {
+            if (!rawTargetImage || typeof cv === 'undefined' || !cv.Mat) return;
+            
+            let box_h = parseFloat(document.getElementById('box_h').value);
+            let box_d = parseFloat(document.getElementById('box_d').value);
+            let light_z = parseFloat(document.getElementById('light_z').value);
+            let front_z = parseFloat(document.getElementById('front_z').value);
+            let target_h = parseFloat(document.getElementById('target_h').value);
+            
+            let src = cv.imread(rawTargetImage);
+            let srcGray = new cv.Mat();
+            cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+            
+            // Threshold to find silhouette boundary
+            let thresh = new cv.Mat();
+            cv.threshold(srcGray, thresh, 240, 255, cv.THRESH_BINARY_INV);
+            
+            // Find non-zero coordinates
+            let y_indices = [];
+            for (let r = 0; r < thresh.rows; r++) {
+                for (let c = 0; c < thresh.cols; c++) {
+                    if (thresh.ucharAt(r, c) > 0) {
+                        y_indices.push(r);
+                    }
+                }
+            }
+            
+            if (y_indices.length === 0) {
+                alert("Could not detect any silhouette inside the image!");
+                src.delete(); srcGray.delete(); thresh.delete();
+                return;
+            }
+            
+            let y_min_px = Math.min(...y_indices);
+            let y_max_px = Math.max(...y_indices);
+            
+            let h_img = thresh.rows;
+            let y_min = target_h / 2.0 - (y_max_px / (h_img - 1)) * target_h;
+            let y_max = target_h / 2.0 - (y_min_px / (h_img - 1)) * target_h;
+            let h_sil = y_max - y_min;
+            
+            let t_min = light_z / (light_z - front_z);
+            let t_max = light_z / (light_z - (front_z + box_d));
+            let h_box_proj = box_h * t_max;
+            
+            let scale = h_box_proj / h_sil;
+            let scale_pct = Math.round(Math.min(500.0, Math.max(10.0, scale * 100.0)));
+            
+            // Aligns neck (~42% down the silhouette) with box top fold projection
+            let y_neck = y_max - 0.42 * h_sil;
+            let y_box_top = (box_h / 2.0) * t_min;
+            let shift_y = Math.round(y_box_top - (scale_pct / 100.0) * y_neck);
+            
+            // Update input fields
+            document.getElementById('img_scale').value = scale_pct;
+            document.getElementById('val_img_scale').innerText = scale_pct + "%";
+            document.getElementById('offset_y').value = shift_y;
+            document.getElementById('val_offset_y').innerText = shift_y;
+            document.getElementById('offset_x').value = 0;
+            document.getElementById('val_offset_x').innerText = 0;
+            
+            // Clean up
+            src.delete(); srcGray.delete(); thresh.delete();
+            
+            // Redraw
+            updateProjections();
+        }
+
+        // Export individual panels + layout template in a ZIP file
+        function exportZipArchive() {
+            if (!crossLayout) {
+                alert("Please generate a preview first!");
+                return;
+            }
+            
+            let zip = new JSZip();
+            
+            // Helper to get image data url as base64 blob
+            function addCanvasToZip(canvasName, canvasElement) {
+                let dataUrl = canvasElement.toDataURL("image/png");
+                let dataBase64 = dataUrl.split(',')[1];
+                zip.file(canvasName + ".png", dataBase64, {base64: true});
+            }
+            
+            function createPanelCanvas(panelObj) {
+                let c = document.createElement('canvas');
+                c.width = panelObj.width;
+                c.height = panelObj.height;
+                let ctx = c.getContext('2d');
+                let imgData = ctx.createImageData(panelObj.width, panelObj.height);
+                for (let i = 0; i < panelObj.data.length; i++) {
+                    let val = panelObj.data[i];
+                    imgData.data[i * 4] = val;
+                    imgData.data[i * 4 + 1] = val;
+                    imgData.data[i * 4 + 2] = val;
+                    imgData.data[i * 4 + 3] = 255;
+                }
+                ctx.putImageData(imgData, 0, 0);
+                return c;
+            }
+
+            // Add all panels
+            addCanvasToZip("wall_left", createPanelCanvas(wallLeft));
+            addCanvasToZip("wall_right", createPanelCanvas(wallRight));
+            addCanvasToZip("wall_top", createPanelCanvas(wallTop));
+            addCanvasToZip("wall_bottom", createPanelCanvas(wallBottom));
+            addCanvasToZip("cross_fold_layout", crossLayout);
+            
+            // Add preprocessed target
+            let targetCanvas = document.getElementById('canvasTargetPreview');
+            addCanvasToZip("preprocessed_target", targetCanvas);
+            
+            // Generate zip file and download
+            zip.generateAsync({type:"blob"}).then(function(content) {
+                let link = document.createElement('a');
+                link.download = "shadow_lamp_panels.zip";
+                link.href = URL.createObjectURL(content);
+                link.click();
+            });
+        }
+    </script>
 </body>
 </html>

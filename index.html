@@ -1200,13 +1200,13 @@
             let targetImgData = tempCanvas.getContext('2d').getImageData(0, 0, tempCanvas.width, tempCanvas.height);
             
             wallLeft = projectWallPanel('left', targetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                        front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+                                        front_z, front_z + box_d, light_z, res, panel_bg, img_scale, offset_x, offset_y);
             wallRight = projectWallPanel('right', targetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                         front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+                                         front_z, front_z + box_d, light_z, res, panel_bg, img_scale, offset_x, offset_y);
             wallTop = projectWallPanel('top', targetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                       front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+                                       front_z, front_z + box_d, light_z, res, panel_bg, img_scale, offset_x, offset_y);
             wallBottom = projectWallPanel('bottom', targetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                          front_z, front_z + box_d, light_z, target_w, target_h, res, panel_bg, img_scale, offset_x, offset_y);
+                                          front_z, front_z + box_d, light_z, res, panel_bg, img_scale, offset_x, offset_y);
             
             let crossCanvas = assembleCrossFoldLayout(wallLeft, wallRight, wallTop, wallBottom, 
                                                      box_w, box_h, box_d, res, panel_bg, draw_slits);

@@ -80,6 +80,12 @@ This document records the mistakes made, user complaints, and implementation rul
   - In `Cutout` mode, we force a solid outer border frame (3 mm wide) on the mat and extract the empty background slots using `cv.THRESH_BINARY`.
   - Manually construct the outermost perimeter of the 3D shape as a perfect unwarped rectangle of the exact panel dimensions ($W \times H$ in pixels), and insert the extracted contours as holes. This guarantees that the wall panel STL always has the full correct physical bounding box size ($70 \times 150$ or $114 \times 70$ mm) and is 3D printable.
 
+### 12. OpenCV.js setUCharAt TypeError Fix (Runtime Crash)
+- **Complaint**: Console logs showed `TypeError: p.setUCharAt is not a function` when generating in Cutout mode.
+- **Resolution**:
+  - OpenCV.js does not expose a `setUCharAt` writing function for Mat elements.
+  - Replaced all writing loops with direct data buffer index assignments: `mat.data[r * width + c] = value` (which is standard and extremely fast in JS).
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

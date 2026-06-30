@@ -82,7 +82,7 @@ export function preprocessSilhouette(
         }
         if (r_max !== -1) {
           for (let r = r_max; r < h_mask; r++) {
-            binary.setUCharAt(r, c, 0); // Ground to black
+            binary.data[r * w_mask + c] = 0; // Ground to black
           }
         }
       }
@@ -435,7 +435,7 @@ export function extrudePanelToSTL(
     for (let r = 0; r < height; r++) {
       for (let c = 0; c < width; c++) {
         if (r < borderPx || r >= height - borderPx || c < borderPx || c >= width - borderPx) {
-          mat.setUCharAt(r, c, 0); // Solid printed boundary
+          mat.data[r * width + c] = 0; // Solid printed boundary
         }
       }
     }

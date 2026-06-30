@@ -60,6 +60,12 @@ This document records the mistakes made, user complaints, and implementation rul
   - Filter out floating noise and small components by setting a minimum area threshold (ignoring islands with area < 15 px).
   - Extrude the shapes cleanly using Three.js `THREE.ExtrudeGeometry` (which yields perfectly smooth curves/walls and watertight triangulation) and export to binary STL.
 
+### 9. Flat Panel Borders and Front-Edge-Centered Origin (STL Alignment)
+- **Complaint**: *"الضلع المستقيم لكل ضلع ملامس للصندوق للداخل مش عاوز يكون فيه ميل لا يكون قائم الزاويه عادي و يكون ال orgin بتاع كل مجسم في منتصف طرف الضلع دا"* (The side of each panel touching the box should remain perpendicular/unslanted, and the origin must be in the middle of this edge).
+- **Resolution**:
+  - Implemented boundary check in `extrudePanelToSTL`: if a vertex lies on the outer rectangular border of the wall panel, its slant scale factor $t$ is forced to `1.0` (keeping it perfectly straight at a normal 90-degree angle to sit flush against the box frames).
+  - Shifted the coordinates of the extruded mesh vertices so that the origin $(0,0,0)$ of the generated STL lies precisely at the center of the front-facing edge (which is the edge of the panel that contacts the front opening border).
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

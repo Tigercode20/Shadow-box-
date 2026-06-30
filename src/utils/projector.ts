@@ -501,16 +501,8 @@ export function extrudePanelToSTL(
   const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
 
   const isSlanted = !!(wallName && boxW && boxH && boxD && lightZ !== undefined && frontZ !== undefined);
-  let t = 1.0;
-  if (isSlanted) {
-    if (wallName === 'left' || wallName === 'right') {
-      t = 1.0 - thicknessMm / (boxW! / 2.0);
-    } else if (wallName === 'top' || wallName === 'bottom') {
-      t = 1.0 - thicknessMm / (boxH! / 2.0);
-    }
-  }
 
-  // Apply slant and millimeter scaling
+  // Apply slant and millimeter scaling and origin shift
   for (let i = 0; i < posAttr.count; i++) {
     const x_out = posAttr.getX(i);
     const y_out = posAttr.getY(i);
@@ -522,13 +514,25 @@ export function extrudePanelToSTL(
     let x_final = x_out;
     let y_final = y_out;
 
-    if (z > 0 && isSlanted) {
+    // Check if the vertex lies on the outer boundary of the panel
+    const isOnBorder = (cg <= 1.5 || cg >= width - 1.5 || rg <= 1.5 || rg >= height - 1.5);
+    
+    let t_val = 1.0;
+    if (isSlanted && !isOnBorder) {
+      if (wallName === 'left' || wallName === 'right') {
+        t_val = 1.0 - thicknessMm / (boxW! / 2.0);
+      } else if (wallName === 'top' || wallName === 'bottom') {
+        t_val = 1.0 - thicknessMm / (boxH! / 2.0);
+      }
+    }
+
+    if (z > 0 && isSlanted && !isOnBorder) {
       if (wallName === 'left' || wallName === 'right') {
         const Z_wall = (frontZ! + boxD!) - (cg / width) * boxD!;
         const Y_wall = (boxH! / 2.0) - (rg / height) * boxH!;
         
-        const Z_in = lightZ! + t * (Z_wall - lightZ!);
-        const Y_in = t * Y_wall;
+        const Z_in = lightZ! + t_val * (Z_wall - lightZ!);
+        const Y_in = t_val * Y_wall;
 
         x_final = (Z_in - frontZ!) * pixelsPerMm;
         y_final = (Y_in + boxH! / 2.0) * pixelsPerMm;
@@ -536,18 +540,29 @@ export function extrudePanelToSTL(
         const X_wall = (-boxW! / 2.0) + (cg / width) * boxW!;
         const Z_wall = (frontZ! + boxD!) - (rg / height) * boxD!;
 
-        const X_in = t * X_wall;
-        const Z_in = lightZ! + t * (Z_wall - lightZ!);
+        const X_in = t_val * X_wall;
+        const Z_in = lightZ! + t_val * (Z_wall - lightZ!);
 
         x_final = (X_in + boxW! / 2.0) * pixelsPerMm;
         y_final = (Z_in - frontZ!) * pixelsPerMm;
       }
     }
 
-    // Scale coordinates back to mm
-    posAttr.setX(i, x_final / pixelsPerMm);
-    posAttr.setY(i, y_final / pixelsPerMm);
-    // Z is already in mm
+    // Convert to millimeter space
+    let x_mm = x_final / pixelsPerMm;
+    let y_mm = y_final / pixelsPerMm;
+
+    // Shift origin to the center of the front edge of the panel
+    if (isSlanted) {
+      if (wallName === 'left' || wallName === 'right') {
+        y_mm = y_mm - boxH! / 2.0;
+      } else if (wallName === 'top' || wallName === 'bottom') {
+        x_mm = x_mm - boxW! / 2.0;
+      }
+    }
+
+    posAttr.setX(i, x_mm);
+    posAttr.setY(i, y_mm);
   }
 
   geometry.computeVertexNormals();

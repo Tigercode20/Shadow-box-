@@ -1742,14 +1742,70 @@
                 return c;
             }
 
-            addCanvasToZip("wall_left", createPanelCanvas(wallLeft));
-            addCanvasToZip("wall_right", createPanelCanvas(wallRight));
-            addCanvasToZip("wall_top", createPanelCanvas(wallTop));
-            addCanvasToZip("wall_bottom", createPanelCanvas(wallBottom));
-            addCanvasToZip("cross_fold_layout", crossLayout);
+            // Regenerate all panels at print-quality high resolution (12.0 pixels/mm)
+            let box_w = parseFloat(document.getElementById('box_w').value);
+            let box_h = parseFloat(document.getElementById('box_h').value);
+            let box_d = parseFloat(document.getElementById('box_d').value);
+            let light_z = parseFloat(document.getElementById('light_z').value);
+            let front_z = parseFloat(document.getElementById('front_z').value);
+            let target_w = parseFloat(document.getElementById('target_w').value);
+            let target_h = parseFloat(document.getElementById('target_h').value);
             
-            let targetCanvas = document.getElementById('canvasTargetPreview');
-            addCanvasToZip("preprocessed_target", targetCanvas);
+            let panel_bg = parseInt(document.querySelector('input[name="panel_type"]:checked').value);
+            let use_edges = document.getElementById('use_edges').checked;
+            let thresh1 = parseInt(document.getElementById('thresh1').value);
+            let thresh2 = parseInt(document.getElementById('thresh2').value);
+            let use_custom_shape = document.getElementById('use_custom_shape').checked;
+            let ground_bottom = document.getElementById('ground_bottom').checked;
+            let draw_slits = document.getElementById('draw_slits').checked;
+            
+            let img_scale = parseFloat(document.getElementById('img_scale').value) / 100.0;
+            let offset_x = parseFloat(document.getElementById('offset_x').value);
+            let offset_y = parseFloat(document.getElementById('offset_y').value);
+            
+            let exportRes = 12.0; // 12 pixels/mm for maximum quality
+            
+            let src = cv.imread(rawTargetImage);
+            let srcGray = new cv.Mat();
+            cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+            
+            let preprocessedMat = preprocessSilhouette(srcGray, target_w, target_h, use_edges, thresh1, thresh2, use_custom_shape, ground_bottom);
+            
+            let hiResTargetCanvas = document.createElement('canvas');
+            hiResTargetCanvas.width = preprocessedMat.cols;
+            hiResTargetCanvas.height = preprocessedMat.rows;
+            
+            let threshMat = new cv.Mat();
+            cv.threshold(preprocessedMat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
+            
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(threshMat, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+            
+            drawContoursToCanvas(hiResTargetCanvas, contours, hierarchy);
+            
+            let hiResTargetImgData = hiResTargetCanvas.getContext('2d').getImageData(0, 0, hiResTargetCanvas.width, hiResTargetCanvas.height);
+            
+            let hiResWallLeft = projectWallPanel('left', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                 front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+            let hiResWallRight = projectWallPanel('right', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                  front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+            let hiResWallTop = projectWallPanel('top', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                 front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+            let hiResWallBottom = projectWallPanel('bottom', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                    front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+                                                    
+            let hiResCrossCanvas = assembleCrossFoldLayout(hiResWallLeft, hiResWallRight, hiResWallTop, hiResWallBottom, 
+                                                           box_w, box_h, box_d, exportRes, panel_bg, draw_slits);
+            
+            addCanvasToZip("wall_left", createPanelCanvas(hiResWallLeft));
+            addCanvasToZip("wall_right", createPanelCanvas(hiResWallRight));
+            addCanvasToZip("wall_top", createPanelCanvas(hiResWallTop));
+            addCanvasToZip("wall_bottom", createPanelCanvas(hiResWallBottom));
+            addCanvasToZip("cross_fold_layout", hiResCrossCanvas);
+            addCanvasToZip("preprocessed_target", hiResTargetCanvas);
+            
+            src.delete(); srcGray.delete(); preprocessedMat.delete(); threshMat.delete(); contours.delete(); hierarchy.delete();
             
             zip.generateAsync({type:"blob"}).then(function(content) {
                 let link = document.createElement('a');
@@ -2190,6 +2246,102 @@
             link.click();
         }
 
+        function getHiResTargetCanvas() {
+            if (!rawTargetImage || typeof cv === 'undefined' || !cv.Mat) return null;
+            
+            let target_w = parseFloat(document.getElementById('target_w').value);
+            let target_h = parseFloat(document.getElementById('target_h').value);
+            let use_edges = document.getElementById('use_edges').checked;
+            let thresh1 = parseInt(document.getElementById('thresh1').value);
+            let thresh2 = parseInt(document.getElementById('thresh2').value);
+            let use_custom_shape = document.getElementById('use_custom_shape').checked;
+            let ground_bottom = document.getElementById('ground_bottom').checked;
+            
+            let src = cv.imread(rawTargetImage);
+            let srcGray = new cv.Mat();
+            cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+            
+            let preprocessedMat = preprocessSilhouette(srcGray, target_w, target_h, use_edges, thresh1, thresh2, use_custom_shape, ground_bottom);
+            
+            let hiResCanvas = document.createElement('canvas');
+            hiResCanvas.width = preprocessedMat.cols;
+            hiResCanvas.height = preprocessedMat.rows;
+            
+            let threshMat = new cv.Mat();
+            cv.threshold(preprocessedMat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
+            
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(threshMat, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+            
+            drawContoursToCanvas(hiResCanvas, contours, hierarchy);
+            
+            src.delete(); srcGray.delete(); preprocessedMat.delete(); threshMat.delete(); contours.delete(); hierarchy.delete();
+            return hiResCanvas;
+        }
+
+        function getHiResTemplateCanvas() {
+            if (!rawTargetImage || typeof cv === 'undefined' || !cv.Mat) return null;
+            
+            let box_w = parseFloat(document.getElementById('box_w').value);
+            let box_h = parseFloat(document.getElementById('box_h').value);
+            let box_d = parseFloat(document.getElementById('box_d').value);
+            let light_z = parseFloat(document.getElementById('light_z').value);
+            let front_z = parseFloat(document.getElementById('front_z').value);
+            let target_w = parseFloat(document.getElementById('target_w').value);
+            let target_h = parseFloat(document.getElementById('target_h').value);
+            
+            let panel_bg = parseInt(document.querySelector('input[name="panel_type"]:checked').value);
+            let use_edges = document.getElementById('use_edges').checked;
+            let thresh1 = parseInt(document.getElementById('thresh1').value);
+            let thresh2 = parseInt(document.getElementById('thresh2').value);
+            let use_custom_shape = document.getElementById('use_custom_shape').checked;
+            let ground_bottom = document.getElementById('ground_bottom').checked;
+            let draw_slits = document.getElementById('draw_slits').checked;
+            
+            let img_scale = parseFloat(document.getElementById('img_scale').value) / 100.0;
+            let offset_x = parseFloat(document.getElementById('offset_x').value);
+            let offset_y = parseFloat(document.getElementById('offset_y').value);
+            
+            let exportRes = 12.0; // 12 pixels/mm
+            
+            let src = cv.imread(rawTargetImage);
+            let srcGray = new cv.Mat();
+            cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+            
+            let preprocessedMat = preprocessSilhouette(srcGray, target_w, target_h, use_edges, thresh1, thresh2, use_custom_shape, ground_bottom);
+            
+            let hiResTargetCanvas = document.createElement('canvas');
+            hiResTargetCanvas.width = preprocessedMat.cols;
+            hiResTargetCanvas.height = preprocessedMat.rows;
+            
+            let threshMat = new cv.Mat();
+            cv.threshold(preprocessedMat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
+            
+            let contours = new cv.MatVector();
+            let hierarchy = new cv.Mat();
+            cv.findContours(threshMat, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+            
+            drawContoursToCanvas(hiResTargetCanvas, contours, hierarchy);
+            
+            let hiResTargetImgData = hiResTargetCanvas.getContext('2d').getImageData(0, 0, hiResTargetCanvas.width, hiResTargetCanvas.height);
+            
+            let hiResWallLeft = projectWallPanel('left', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                 front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+            let hiResWallRight = projectWallPanel('right', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                  front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+            let hiResWallTop = projectWallPanel('top', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                 front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+            let hiResWallBottom = projectWallPanel('bottom', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
+                                                    front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+                                                    
+            let hiResCrossCanvas = assembleCrossFoldLayout(hiResWallLeft, hiResWallRight, hiResWallTop, hiResWallBottom, 
+                                                           box_w, box_h, box_d, exportRes, panel_bg, draw_slits);
+            
+            src.delete(); srcGray.delete(); preprocessedMat.delete(); threshMat.delete(); contours.delete(); hierarchy.delete();
+            return hiResCrossCanvas;
+        }
+
         // Bind click event listeners
         document.addEventListener('click', function(e) {
             let vecBtn = e.target.closest('.vec-dl-btn');
@@ -2207,24 +2359,28 @@
 
             let targetBtn = e.target.closest('.target-dl-btn');
             if (targetBtn) {
-                let canvas = document.getElementById('canvasTargetPreview');
                 let format = targetBtn.dataset.format;
-                if (format === 'svg') downloadCanvasAsSVG(canvas, "preprocessed_silhouette");
-                else if (format === 'pdf') downloadCanvasAsPDF(canvas, "preprocessed_silhouette");
-                else downloadCanvasAsImage(canvas, "preprocessed_silhouette", format);
+                if (!rawTargetImage) {
+                    alert("Please upload a silhouette first!");
+                    return;
+                }
+                let hiResCanvas = getHiResTargetCanvas();
+                if (format === 'svg') downloadCanvasAsSVG(hiResCanvas, "preprocessed_silhouette");
+                else if (format === 'pdf') downloadCanvasAsPDF(hiResCanvas, "preprocessed_silhouette");
+                else downloadCanvasAsImage(hiResCanvas, "preprocessed_silhouette", format);
             }
 
             let templateBtn = e.target.closest('.template-dl-btn');
             if (templateBtn) {
-                let canvas = document.getElementById('canvasCrossPreview');
                 let format = templateBtn.dataset.format;
                 if (!crossLayout) {
                     alert("Please generate a preview first!");
                     return;
                 }
-                if (format === 'svg') downloadCanvasAsSVG(canvas, "unfolded_lamp_template");
-                else if (format === 'pdf') downloadCanvasAsPDF(canvas, "unfolded_lamp_template");
-                else downloadCanvasAsImage(canvas, "unfolded_lamp_template", format);
+                let hiResCanvas = getHiResTemplateCanvas();
+                if (format === 'svg') downloadCanvasAsSVG(hiResCanvas, "unfolded_lamp_template");
+                else if (format === 'pdf') downloadCanvasAsPDF(hiResCanvas, "unfolded_lamp_template");
+                else downloadCanvasAsImage(hiResCanvas, "unfolded_lamp_template", format);
             }
         });
     </script>

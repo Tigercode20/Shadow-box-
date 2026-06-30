@@ -43,7 +43,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
   const [crossCanvas, setCrossCanvas] = useState<HTMLCanvasElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [thickness, setThickness] = useState<number>(5.0);
+  const [thickness, setThickness] = useState<number>(2.5);
   const [selectedFormats, setSelectedFormats] = useState({
     svg: true,
     pdf: true,

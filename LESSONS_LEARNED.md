@@ -39,6 +39,12 @@ This document records the mistakes made, user complaints, and implementation rul
   - In `handleExportZip`, the percentage `scale` was passed directly instead of being divided by `100.0`, mapping the entire wall projection coordinates to a sub-pixel fraction of the target Gojo drawing. This mapped the entire projection to a single boundary pixel transition, resulting in wide gradients.
   - Divided `scale` by `100.0` before passing to `exportZipArchive` to match the exact mathematical fractional scale.
 
+### 6. Straight 3D Extrusion Blocking Light Rays (Slanted Cutouts)
+- **Complaint**: *"تخن بتاع الحيطه دا بيخلي جذء من شعاع النور يتقطع و يتصد... في التصميم الاصلي كان القطع مائل"* (The wall thickness blocks some of the light rays. In the original design, the cutouts were made at an angle).
+- **Resolution**:
+  - Replaced standard straight parallel extrusion for wall panels with **Ray-Aligned Slanted Extrusion** matching the physics of the point light source $S(0, 0, Z_{light})$.
+  - Dynamically scale the inner face geometry by perspective scaling factor $t = 1.0 - \text{thickness} / (\text{boundary}/2)$ and project inner corner vertices relative to the spot light, resulting in perfectly slanted cutout walls that don't block the light rays.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

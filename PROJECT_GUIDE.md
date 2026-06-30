@@ -21,13 +21,16 @@ The project has been migrated from a single-file Vanilla HTML/JS structure into 
 │   │   │   └── LoadingOverlay.tsx # Neon splash loading screen while OpenCV.js initializes
 │   │   ├── Step1Vectorizer/
 │   │   │   └── VectorizerPanel.tsx# Quantization, Otsu auto-adjust, and contour preview
-│   │   └── Step2Maker/
-│   │       └── MakerPanel.tsx     # Silhouette fitting, physical size setup, and multi-format exports
+│   │   ├── Step2Maker/
+│   │   │   └── MakerPanel.tsx     # Silhouette fitting, physical size setup, and multi-format exports
+│   │   └── Step3StlViewer/
+│   │       └── StlViewerPanel.tsx # 3D STL viewer using Three.js and OrbitControls
 │   ├── utils/              # Code utilities & Math engines
 │   │   ├── opencv.ts       # Global OpenCV.js initialization check and hooks
 │   │   ├── projector.ts    # Core ray-tracing equations and bilinear interpolation logic
 │   │   ├── quantizer.ts    # Median Cut Color Quantization algorithm
-│   │   └── exporters.ts    # Export handlers for high-res PNG, JPG, PDF, SVG, & ZIP
+│   │   ├── exporters.ts    # Export handlers for high-res PNG, JPG, PDF, SVG, & ZIP
+│   │   └── stlParser.ts    # Custom ASCII/Binary STL parser for 3D BufferGeometry
 │   ├── App.tsx             # Application wrapper, tabs, and shared canvas states
 │   ├── index.css           # Futuristic glassmorphism theme stylesheet & mobile viewports
 │   └── main.tsx            # React application entry point

@@ -263,8 +263,20 @@ export function exportZipArchive(
     }
   }
 
-  function addPanelSTLToZip(panelName: string, panelObj: PanelResult, pixelsPerMm: number) {
-    let arrayBuffer = extrudePanelToSTL(panelObj.data, panelObj.width, panelObj.height, thickness_mm, pixelsPerMm);
+  function addPanelSTLToZip(panelName: string, panelObj: PanelResult, pixelsPerMm: number, wallName: string) {
+    let arrayBuffer = extrudePanelToSTL(
+      panelObj.data,
+      panelObj.width,
+      panelObj.height,
+      thickness_mm,
+      pixelsPerMm,
+      wallName,
+      box_w,
+      box_h,
+      box_d,
+      light_z,
+      front_z
+    );
     zip.file(`${panelName}.stl`, arrayBuffer);
   }
 
@@ -325,10 +337,10 @@ export function exportZipArchive(
   addCanvasToZip("preprocessed_target", hiResTargetCanvas);
 
   if (formats.stl) {
-    addPanelSTLToZip("wall_left", hiResWallLeft, exportRes);
-    addPanelSTLToZip("wall_right", hiResWallRight, exportRes);
-    addPanelSTLToZip("wall_top", hiResWallTop, exportRes);
-    addPanelSTLToZip("wall_bottom", hiResWallBottom, exportRes);
+    addPanelSTLToZip("wall_left", hiResWallLeft, exportRes, "left");
+    addPanelSTLToZip("wall_right", hiResWallRight, exportRes, "right");
+    addPanelSTLToZip("wall_top", hiResWallTop, exportRes, "top");
+    addPanelSTLToZip("wall_bottom", hiResWallBottom, exportRes, "bottom");
     addTargetSTLToZip("preprocessed_target", hiResTargetCanvas);
     
     // Extrude cross layout

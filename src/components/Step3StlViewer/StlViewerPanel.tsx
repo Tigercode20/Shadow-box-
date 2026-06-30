@@ -1,0 +1,273 @@
+import React, { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { parseSTL } from '../../utils/stlParser';
+
+interface StlViewerPanelProps {
+  active: boolean;
+}
+
+export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active }) => {
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  const [fileInfo, setFileInfo] = useState<{
+    name: string;
+    triangles: number;
+    sizeX: number;
+    sizeY: number;
+    sizeZ: number;
+  } | null>(null);
+
+  const [dragActive, setDragActive] = useState<boolean>(false);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const meshRef = useRef<THREE.Mesh | null>(null);
+
+  useEffect(() => {
+    if (!active || !mountRef.current) return;
+
+    // Create scene
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0c0c12);
+    sceneRef.current = scene;
+
+    // Create camera
+    const camera = new THREE.PerspectiveCamera(
+      45,
+      mountRef.current.clientWidth / mountRef.current.clientHeight,
+      0.1,
+      1000
+    );
+    camera.position.set(0, 120, 200);
+
+    // Create renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    mountRef.current.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+
+    // Orbit controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controlsRef.current = controls;
+
+    // Lights
+    const ambientLight = new THREE.AmbientLight(0x404040, 1.5);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 2.0);
+    dirLight1.position.set(100, 200, 100);
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x00f0ff, 1.0);
+    dirLight2.position.set(-100, -200, -100);
+    scene.add(dirLight2);
+
+    // Grid helper
+    const grid = new THREE.GridHelper(200, 50, 0x00f0ff, 0x2c2c35);
+    grid.position.y = -0.01;
+    scene.add(grid);
+
+    // Animation loop
+    let animationFrameId: number;
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Handle resize
+    const handleResize = () => {
+      if (!mountRef.current) return;
+      camera.aspect = mountRef.current.clientWidth / mountRef.current.clientHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
+      if (rendererRef.current && mountRef.current) {
+        try {
+          mountRef.current.removeChild(renderer.domElement);
+        } catch (_) {}
+      }
+      renderer.dispose();
+    };
+  }, [active]);
+
+  const loadSTLBuffer = (buffer: ArrayBuffer, name: string) => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    // Remove old mesh
+    if (meshRef.current) {
+      scene.remove(meshRef.current);
+      meshRef.current.geometry.dispose();
+      (meshRef.current.material as THREE.Material).dispose();
+    }
+
+    try {
+      const geometry = parseSTL(buffer);
+      
+      // Compute metadata
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox!;
+      const size = new THREE.Vector3();
+      box.getSize(size);
+
+      // Center geometry
+      geometry.center();
+
+      const material = new THREE.MeshPhongMaterial({
+        color: 0x00f0ff,
+        specular: 0x111111,
+        shininess: 200,
+        side: THREE.DoubleSide
+      });
+
+      const mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+      meshRef.current = mesh;
+
+      setFileInfo({
+        name,
+        triangles: geometry.getAttribute('position').count / 3,
+        sizeX: parseFloat(size.x.toFixed(2)),
+        sizeY: parseFloat(size.y.toFixed(2)),
+        sizeZ: parseFloat(size.z.toFixed(2))
+      });
+
+      // Fit camera to object
+      const maxDim = Math.max(size.x, size.y, size.z);
+      if (controlsRef.current) {
+        const camera = controlsRef.current.object as THREE.PerspectiveCamera;
+        camera.position.set(maxDim * 1.2, maxDim * 1.2, maxDim * 1.5);
+        controlsRef.current.target.set(0, 0, 0);
+        controlsRef.current.update();
+      }
+
+    } catch (e) {
+      alert("Error parsing STL file. Make sure it is a valid STL format.");
+      console.error(e);
+    }
+  };
+
+  const handleFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result instanceof ArrayBuffer) {
+        loadSTLBuffer(e.target.result, file.name);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  return (
+    <div className={`workspace-panel ${active ? 'active' : ''}`} id="panel-stl-viewer" style={{ padding: '0', display: active ? 'flex' : 'none', height: 'calc(100vh - 70px)' }}>
+      {/* Sidebar Metadata */}
+      <div className="sidebar" style={{ width: '320px', flexShrink: 0, padding: '24px', borderRight: '1px solid var(--card-border)', background: 'rgba(11, 11, 16, 0.98)', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
+        <div className="card">
+          <div className="card-title">
+            <i className="fa-solid fa-cube" style={{ color: 'var(--primary)' }}></i> 3D STL Inspector
+          </div>
+          
+          <div 
+            className={`file-upload-zone ${dragActive ? 'active' : ''}`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            style={{
+              border: '2px dashed var(--card-border)',
+              borderRadius: '12px',
+              padding: '24px',
+              textAlign: 'center',
+              cursor: 'pointer',
+              background: dragActive ? 'rgba(0, 240, 255, 0.05)' : 'rgba(255,255,255,0.01)',
+              transition: 'all 0.3s ease',
+              borderColor: dragActive ? 'var(--primary)' : 'var(--card-border)'
+            }}
+            onClick={() => document.getElementById('stl-file-input')?.click()}
+          >
+            <i className="fa-solid fa-cloud-arrow-up" style={{ fontSize: '1.8rem', color: 'var(--text-muted)', marginBottom: '10px' }}></i>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: '0' }}>Drag & drop STL file here</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>or click to browse</p>
+            <input 
+              type="file" 
+              id="stl-file-input" 
+              accept=".stl" 
+              style={{ display: 'none' }}
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+            />
+          </div>
+        </div>
+
+        {fileInfo && (
+          <div className="card" style={{ animation: 'fadeIn 0.3s ease' }}>
+            <div className="card-title" style={{ fontSize: '0.95rem' }}>
+              <i className="fa-solid fa-circle-info" style={{ color: 'var(--primary)' }}></i> File Details
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem', color: 'var(--text-main)', marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Filename:</span>
+                <span style={{ fontWeight: 600, wordBreak: 'break-all', textAlign: 'right' }}>{fileInfo.name}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Triangles:</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{fileInfo.triangles.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Width (X):</span>
+                <span style={{ fontWeight: 600 }}>{fileInfo.sizeX} mm</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Height (Y):</span>
+                <span style={{ fontWeight: 600 }}>{fileInfo.sizeY} mm</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Thickness (Z):</span>
+                <span style={{ fontWeight: 600, color: 'var(--primary)' }}>{fileInfo.sizeZ} mm</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 3D Canvas Area */}
+      <div ref={mountRef} style={{ flex: 1, height: '100%', position: 'relative' }}>
+        {!fileInfo && (
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', pointerEvents: 'none' }}>
+            <i className="fa-solid fa-cube" style={{ fontSize: '3rem', color: 'rgba(0, 240, 255, 0.1)', animation: 'spin 8s linear infinite', marginBottom: '15px' }}></i>
+            <h3 style={{ margin: '0', color: 'var(--text-muted)', fontWeight: 600 }}>3D STL Preview</h3>
+            <p style={{ margin: '5px 0 0 0', color: 'rgba(255,255,255,0.2)', fontSize: '0.85rem' }}>Upload a file in the sidebar to inspect in 3D</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -3,10 +3,11 @@ import { Header } from './components/Layout/Header';
 import { LoadingOverlay } from './components/Layout/LoadingOverlay';
 import { VectorizerPanel } from './components/Step1Vectorizer/VectorizerPanel';
 import { MakerPanel } from './components/Step2Maker/MakerPanel';
+import { StlViewerPanel } from './components/Step3StlViewer/StlViewerPanel';
 import { isOpenCvLoaded } from './utils/opencv';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'vectorizer' | 'maker'>('vectorizer');
+  const [activeTab, setActiveTab] = useState<'vectorizer' | 'maker' | 'stl-viewer'>('vectorizer');
   const [opencvLoaded, setOpencvLoaded] = useState<boolean>(false);
 
   // Vectorizer canvases
@@ -64,6 +65,9 @@ function App() {
               active={activeTab === 'maker'}
               rawSilhouetteCanvas={rawSilhouetteCanvas}
               setRawSilhouetteCanvas={setRawSilhouetteCanvas}
+            />
+            <StlViewerPanel
+              active={activeTab === 'stl-viewer'}
             />
           </div>
         </>

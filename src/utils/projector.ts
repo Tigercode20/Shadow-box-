@@ -413,7 +413,13 @@ export function extrudePanelToSTL(
   width: number,
   height: number,
   thicknessMm: number,
-  pixelsPerMm: number
+  pixelsPerMm: number,
+  wallName?: string,
+  boxW?: number,
+  boxH?: number,
+  boxD?: number,
+  lightZ?: number,
+  frontZ?: number
 ): ArrayBuffer {
   const isSolid = (r: number, c: number) => {
     if (r < 0 || r >= height || c < 0 || c >= width) return false;
@@ -421,6 +427,57 @@ export function extrudePanelToSTL(
   };
 
   const pxSize = 1.0 / pixelsPerMm;
+  const isSlanted = !!(wallName && boxW && boxH && boxD && lightZ !== undefined && frontZ !== undefined);
+  let t = 1.0;
+  if (isSlanted) {
+    if (wallName === 'left' || wallName === 'right') {
+      t = 1.0 - thicknessMm / (boxW! / 2.0);
+    } else if (wallName === 'top' || wallName === 'bottom') {
+      t = 1.0 - thicknessMm / (boxH! / 2.0);
+    }
+  }
+
+  const getCornerCoords = (cg: number, rg: number) => {
+    let x_out = 0;
+    let y_out = 0;
+    let x_in = 0;
+    let y_in = 0;
+
+    if (isSlanted) {
+      if (wallName === 'left' || wallName === 'right') {
+        const Z_wall = (frontZ! + boxD!) - (cg / width) * boxD!;
+        const Y_wall = (boxH! / 2.0) - (rg / height) * boxH!;
+        
+        x_out = Z_wall - frontZ!;
+        y_out = Y_wall + boxH! / 2.0;
+
+        const Z_in = lightZ! + t * (Z_wall - lightZ!);
+        const Y_in = t * Y_wall;
+
+        x_in = Z_in - frontZ!;
+        y_in = Y_in + boxH! / 2.0;
+      } else {
+        const X_wall = (-boxW! / 2.0) + (cg / width) * boxW!;
+        const Z_wall = (frontZ! + boxD!) - (rg / height) * boxD!;
+
+        x_out = X_wall + boxW! / 2.0;
+        y_out = Z_wall - frontZ!;
+
+        const X_in = t * X_wall;
+        const Z_in = lightZ! + t * (Z_wall - lightZ!);
+
+        x_in = X_in + boxW! / 2.0;
+        y_in = Z_in - frontZ!;
+      }
+    } else {
+      x_out = cg * pxSize;
+      y_out = (height - rg) * pxSize;
+      x_in = x_out;
+      y_in = y_out;
+    }
+
+    return { x_out, y_out, x_in, y_in };
+  };
 
   let numTriangles = 0;
   for (let r = 0; r < height; r++) {
@@ -439,7 +496,6 @@ export function extrudePanelToSTL(
   const buffer = new ArrayBuffer(bufferSize);
   const view = new DataView(buffer);
 
-  // Header (80 bytes empty)
   // Number of triangles
   view.setUint32(80, numTriangles, true);
 
@@ -474,43 +530,42 @@ export function extrudePanelToSTL(
   for (let r = 0; r < height; r++) {
     for (let c = 0; c < width; c++) {
       if (isSolid(r, c)) {
-        const x1 = c * pxSize;
-        const x2 = (c + 1) * pxSize;
-        const y1 = (height - 1 - r) * pxSize;
-        const y2 = (height - r) * pxSize;
-        const z1 = 0;
-        const z2 = thicknessMm;
+        // Retrieve the 4 corner points
+        const p00 = getCornerCoords(c, r);
+        const p10 = getCornerCoords(c + 1, r);
+        const p01 = getCornerCoords(c, r + 1);
+        const p11 = getCornerCoords(c + 1, r + 1);
 
-        // Back Face (Facing -Z)
-        writeTriangle(0, 0, -1, x1, y1, z1, x1, y2, z1, x2, y2, z1);
-        writeTriangle(0, 0, -1, x1, y1, z1, x2, y2, z1, x2, y1, z1);
+        // 1. Back Face (Z = 0, facing -Z)
+        writeTriangle(0, 0, -1, p00.x_out, p00.y_out, 0, p01.x_out, p01.y_out, 0, p11.x_out, p11.y_out, 0);
+        writeTriangle(0, 0, -1, p00.x_out, p00.y_out, 0, p11.x_out, p11.y_out, 0, p10.x_out, p10.y_out, 0);
 
-        // Front Face (Facing +Z)
-        writeTriangle(0, 0, 1, x1, y1, z2, x2, y2, z2, x1, y2, z2);
-        writeTriangle(0, 0, 1, x1, y1, z2, x2, y1, z2, x2, y2, z2);
+        // 2. Front Face (Z = thicknessMm, facing +Z)
+        writeTriangle(0, 0, 1, p00.x_in, p00.y_in, thicknessMm, p11.x_in, p11.y_in, thicknessMm, p01.x_in, p01.y_in, thicknessMm);
+        writeTriangle(0, 0, 1, p00.x_in, p00.y_in, thicknessMm, p10.x_in, p10.y_in, thicknessMm, p11.x_in, p11.y_in, thicknessMm);
 
-        // Top Side (Facing +Y)
+        // 3. Top Side (Facing +Y)
         if (!isSolid(r - 1, c)) {
-          writeTriangle(0, 1, 0, x1, y2, z1, x1, y2, z2, x2, y2, z2);
-          writeTriangle(0, 1, 0, x1, y2, z1, x2, y2, z2, x2, y2, z1);
+          writeTriangle(0, 1, 0, p00.x_out, p00.y_out, 0, p10.x_in, p10.y_in, thicknessMm, p10.x_out, p10.y_out, 0);
+          writeTriangle(0, 1, 0, p00.x_out, p00.y_out, 0, p00.x_in, p00.y_in, thicknessMm, p10.x_in, p10.y_in, thicknessMm);
         }
 
-        // Bottom Side (Facing -Y)
+        // 4. Bottom Side (Facing -Y)
         if (!isSolid(r + 1, c)) {
-          writeTriangle(0, -1, 0, x1, y1, z1, x2, y1, z2, x1, y1, z2);
-          writeTriangle(0, -1, 0, x1, y1, z1, x2, y1, z1, x2, y1, z2);
+          writeTriangle(0, -1, 0, p01.x_out, p01.y_out, 0, p11.x_out, p11.y_out, 0, p11.x_in, p11.y_in, thicknessMm);
+          writeTriangle(0, -1, 0, p01.x_out, p01.y_out, 0, p11.x_in, p11.y_in, thicknessMm, p01.x_in, p01.y_in, thicknessMm);
         }
 
-        // Left Side (Facing -X)
+        // 5. Left Side (Facing -X)
         if (!isSolid(r, c - 1)) {
-          writeTriangle(-1, 0, 0, x1, y1, z1, x1, y1, z2, x1, y2, z2);
-          writeTriangle(-1, 0, 0, x1, y1, z1, x1, y2, z2, x1, y2, z1);
+          writeTriangle(-1, 0, 0, p00.x_out, p00.y_out, 0, p01.x_in, p01.y_in, thicknessMm, p01.x_out, p01.y_out, 0);
+          writeTriangle(-1, 0, 0, p00.x_out, p00.y_out, 0, p00.x_in, p00.y_in, thicknessMm, p01.x_in, p01.y_in, thicknessMm);
         }
 
-        // Right Side (Facing +X)
+        // 6. Right Side (Facing +X)
         if (!isSolid(r, c + 1)) {
-          writeTriangle(1, 0, 0, x2, y1, z1, x2, y2, z2, x2, y1, z2);
-          writeTriangle(1, 0, 0, x2, y1, z1, x2, y2, z1, x2, y2, z2);
+          writeTriangle(1, 0, 0, p10.x_out, p10.y_out, 0, p11.x_out, p11.y_out, 0, p11.x_in, p11.y_in, thicknessMm);
+          writeTriangle(1, 0, 0, p10.x_out, p10.y_out, 0, p11.x_in, p11.y_in, thicknessMm, p10.x_in, p10.y_in, thicknessMm);
         }
       }
     }

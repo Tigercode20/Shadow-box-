@@ -169,25 +169,25 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
     const stlLeft = extrudePanelToSTL(
       leftPanel.data, leftPanel.width, leftPanel.height, thickness, resolution,
-      'left', boxW, boxH, boxD, lightZ, frontZ
+      'left', boxW, boxH, boxD, lightZ, frontZ, panelType
     );
     stlList.push({ name: 'Left Wall', buffer: stlLeft });
 
     const stlRight = extrudePanelToSTL(
       rightPanel.data, rightPanel.width, rightPanel.height, thickness, resolution,
-      'right', boxW, boxH, boxD, lightZ, frontZ
+      'right', boxW, boxH, boxD, lightZ, frontZ, panelType
     );
     stlList.push({ name: 'Right Wall', buffer: stlRight });
 
     const stlTop = extrudePanelToSTL(
       topPanel.data, topPanel.width, topPanel.height, thickness, resolution,
-      'top', boxW, boxH, boxD, lightZ, frontZ
+      'top', boxW, boxH, boxD, lightZ, frontZ, panelType
     );
     stlList.push({ name: 'Top Wall', buffer: stlTop });
 
     const stlBottom = extrudePanelToSTL(
       bottomPanel.data, bottomPanel.width, bottomPanel.height, thickness, resolution,
-      'bottom', boxW, boxH, boxD, lightZ, frontZ
+      'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType
     );
     stlList.push({ name: 'Bottom Wall', buffer: stlBottom });
 
@@ -201,7 +201,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
         targetPanelData[i] = targetImgData.data[i * 4];
       }
       const targetPxPerMm = targetWPixels / targetW;
-      const stlTarget = extrudePanelToSTL(targetPanelData, targetWPixels, targetHPixels, thickness, targetPxPerMm);
+      const stlTarget = extrudePanelToSTL(targetPanelData, targetWPixels, targetHPixels, thickness, targetPxPerMm, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
       stlList.push({ name: 'Preprocessed Silhouette', buffer: stlTarget });
     }
 
@@ -214,7 +214,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
       for (let i = 0; i < crossW * crossH; i++) {
         crossPanelData[i] = crossImgData.data[i * 4];
       }
-      const stlCross = extrudePanelToSTL(crossPanelData, crossW, crossH, thickness, resolution);
+      const stlCross = extrudePanelToSTL(crossPanelData, crossW, crossH, thickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
       stlList.push({ name: 'Unfolded Template', buffer: stlCross });
     }
 

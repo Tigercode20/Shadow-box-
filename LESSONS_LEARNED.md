@@ -72,6 +72,14 @@ This document records the mistakes made, user complaints, and implementation rul
   - The previous high area noise filter (`area < 15 px`) removed thin lines of the silhouette at low preview resolutions, deleting details. Lowered the noise threshold to `2 px` to preserve all fine contours.
   - Checked the `isOnBorder` condition on unslanted coordinates in millimeter space with a tolerance of `0.5 mm` before applying shifts/slants. This prevents the outer boundary of the panel from warping due to pixel approximations, keeping the outer edges perfectly rectangular and straight while allowing details to slant correctly.
 
+### 11. Solid/Cutout Mode Inversions and Outer Border Frames (STL Completeness)
+- **Complaint**: Visual inspection of STL outputs showed that the walls in Cutout mode had details inverted (empty background became a solid sheet, and solid detail became a cutout), and the physical outer frame limits were missing (partial fragments of the silhouette details were generated instead of the full size rectangular wall panel).
+- **Resolution**:
+  - Rewrote the contour parsing of `extrudePanelToSTL` to accept the `panelBg` configuration.
+  - In `Solid` mode, the cutout holes are extracted using `cv.THRESH_BINARY_INV`.
+  - In `Cutout` mode, we force a solid outer border frame (3 mm wide) on the mat and extract the empty background slots using `cv.THRESH_BINARY`.
+  - Manually construct the outermost perimeter of the 3D shape as a perfect unwarped rectangle of the exact panel dimensions ($W \times H$ in pixels), and insert the extracted contours as holes. This guarantees that the wall panel STL always has the full correct physical bounding box size ($70 \times 150$ or $114 \times 70$ mm) and is 3D printable.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

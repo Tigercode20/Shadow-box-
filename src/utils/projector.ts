@@ -420,65 +420,64 @@ export function extrudePanelToSTL(
   boxH?: number,
   boxD?: number,
   lightZ?: number,
-  frontZ?: number
+  frontZ?: number,
+  panelBg: number = 255
 ): ArrayBuffer {
   const cv = getCV();
   if (!cv) return new ArrayBuffer(84);
 
   // Load into OpenCV mat
   const mat = cv.matFromArray(height, width, cv.CV_8UC1, Array.from(panelData));
+  
+  // If Cutout mode, draw a 3mm solid border frame around the mat edges to connect shapes
+  if (panelBg === 255) {
+    const borderPx = Math.round(3.0 * pixelsPerMm);
+    for (let r = 0; r < height; r++) {
+      for (let c = 0; c < width; c++) {
+        if (r < borderPx || r >= height - borderPx || c < borderPx || c >= width - borderPx) {
+          mat.setUCharAt(r, c, 0); // Solid printed boundary
+        }
+      }
+    }
+  }
+
   const threshMat = new cv.Mat();
-  cv.threshold(mat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
+  if (panelBg === 0) {
+    // Solid mode: we want the cutout holes (which are 0) to be white (255)
+    cv.threshold(mat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
+  } else {
+    // Cutout mode: we want the empty spaces (which are 255) to be white (255)
+    cv.threshold(mat, threshMat, 127, 255, cv.THRESH_BINARY);
+  }
 
   const contours = new cv.MatVector();
   const hierarchy = new cv.Mat();
   cv.findContours(threshMat, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
 
-  const shapes: THREE.Shape[] = [];
-  const shapeMap = new Map<number, THREE.Shape>();
-  const holeMap = new Map<number, THREE.Path>();
+  // Create the main rectangular outer shape in pixel space
+  const outerPoints = [
+    new THREE.Vector2(0, 0),
+    new THREE.Vector2(width, 0),
+    new THREE.Vector2(width, height),
+    new THREE.Vector2(0, height)
+  ];
+  const mainShape = new THREE.Shape(outerPoints);
 
-  // Filter out tiny noise and build shapes/holes
+  // Add all contours as holes inside the main rectangle shape
   for (let i = 0; i < contours.size(); i++) {
     const contour = contours.get(i);
     if (contour.rows < 3) continue;
 
-    // Filter noise: keep details but ignore tiny single-pixel artifacts (area < 2 px)
     const area = cv.contourArea(contour);
-    if (area < 2) continue;
-
-    const h = hierarchy.intPtr(0, i);
-    const parent = h[3];
+    if (area < 2) continue; // Skip tiny single-pixel artifacts
 
     const points: THREE.Vector2[] = [];
     for (let j = 0; j < contour.rows; j++) {
       const c_val = contour.data32S[j * 2];
       const r_val = contour.data32S[j * 2 + 1];
-      // Flip Y so it increases upwards in Cartesian space
       points.push(new THREE.Vector2(c_val, height - r_val));
     }
-
-    if (parent === -1) {
-      const shape = new THREE.Shape(points);
-      shapes.push(shape);
-      shapeMap.set(i, shape);
-    } else {
-      const path = new THREE.Path(points);
-      holeMap.set(i, path);
-    }
-  }
-
-  // Associate holes to parent shapes
-  for (let i = 0; i < contours.size(); i++) {
-    const h = hierarchy.intPtr(0, i);
-    const parent = h[3];
-    if (parent !== -1) {
-      const parentShape = shapeMap.get(parent);
-      const holePath = holeMap.get(i);
-      if (parentShape && holePath) {
-        parentShape.holes.push(holePath);
-      }
-    }
+    mainShape.holes.push(new THREE.Path(points));
   }
 
   // Cleanup OpenCV
@@ -487,17 +486,13 @@ export function extrudePanelToSTL(
   contours.delete();
   hierarchy.delete();
 
-  if (shapes.length === 0) {
-    return new ArrayBuffer(84); // Empty STL
-  }
-
-  // Extrude shapes using Three.js
+  // Extrude shape using Three.js
   const extrudeSettings = {
     depth: thicknessMm,
     bevelEnabled: false
   };
 
-  const geometry = new THREE.ExtrudeGeometry(shapes, extrudeSettings);
+  const geometry = new THREE.ExtrudeGeometry([mainShape], extrudeSettings);
   const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
 
   const isSlanted = !!(wallName && boxW && boxH && boxD && lightZ !== undefined && frontZ !== undefined);

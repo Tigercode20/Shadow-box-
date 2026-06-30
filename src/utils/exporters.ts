@@ -275,7 +275,8 @@ export function exportZipArchive(
       box_h,
       box_d,
       light_z,
-      front_z
+      front_z,
+      panel_bg
     );
     zip.file(`${panelName}.stl`, arrayBuffer);
   }
@@ -290,7 +291,7 @@ export function exportZipArchive(
       panelData[i] = imgData.data[i * 4];
     }
     let targetPxPerMm = w / target_w;
-    let arrayBuffer = extrudePanelToSTL(panelData, w, h, thickness_mm, targetPxPerMm);
+    let arrayBuffer = extrudePanelToSTL(panelData, w, h, thickness_mm, targetPxPerMm, undefined, undefined, undefined, undefined, undefined, undefined, panel_bg);
     zip.file(`${canvasName}.stl`, arrayBuffer);
   }
 
@@ -352,7 +353,7 @@ export function exportZipArchive(
     for (let i = 0; i < crossW * crossH; i++) {
       crossPanelData[i] = crossImgData.data[i * 4];
     }
-    let crossArrayBuffer = extrudePanelToSTL(crossPanelData, crossW, crossH, thickness_mm, exportRes);
+    let crossArrayBuffer = extrudePanelToSTL(crossPanelData, crossW, crossH, thickness_mm, exportRes, undefined, undefined, undefined, undefined, undefined, undefined, panel_bg);
     zip.file("cross_fold_layout.stl", crossArrayBuffer);
   }
   

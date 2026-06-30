@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCV } from '../../utils/opencv';
 import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas } from '../../utils/projector';
-import { downloadCanvasAsImage, downloadCanvasAsPDF, downloadCanvasAsSVG, exportZipArchive } from '../../utils/exporters';
+import { downloadCanvasAsImage, downloadCanvasAsPDF, downloadCanvasAsSVG, downloadCanvasAsSTL, exportZipArchive } from '../../utils/exporters';
 import { SliderControl } from '../Common/SliderControl';
 
 interface MakerPanelProps {
@@ -43,11 +43,13 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
   const [crossCanvas, setCrossCanvas] = useState<HTMLCanvasElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [thickness, setThickness] = useState<number>(5.0);
   const [selectedFormats, setSelectedFormats] = useState({
     svg: true,
     pdf: true,
     png: true,
-    jpg: true
+    jpg: true,
+    stl: true
   });
 
   const targetCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -335,7 +337,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     return hiResCrossCanvas;
   };
 
-  const handleExportTarget = (format: 'svg' | 'pdf' | 'png' | 'jpg') => {
+  const handleExportTarget = (format: 'svg' | 'pdf' | 'png' | 'jpg' | 'stl') => {
     if (!rawSilhouetteCanvas) {
       alert("Please load or generate a silhouette first!");
       return;
@@ -345,10 +347,14 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
     if (format === 'svg') downloadCanvasAsSVG(hiRes, "preprocessed_silhouette");
     else if (format === 'pdf') downloadCanvasAsPDF(hiRes, "preprocessed_silhouette");
+    else if (format === 'stl') {
+      const targetPxPerMm = hiRes.width / targetW;
+      downloadCanvasAsSTL(hiRes, "preprocessed_silhouette", thickness, targetPxPerMm);
+    }
     else downloadCanvasAsImage(hiRes, "preprocessed_silhouette", format);
   };
 
-  const handleExportTemplate = (format: 'svg' | 'pdf' | 'png' | 'jpg') => {
+  const handleExportTemplate = (format: 'svg' | 'pdf' | 'png' | 'jpg' | 'stl') => {
     if (!crossCanvas) {
       alert("Please generate a preview first!");
       return;
@@ -358,6 +364,10 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
     if (format === 'svg') downloadCanvasAsSVG(hiRes, "unfolded_lamp_template");
     else if (format === 'pdf') downloadCanvasAsPDF(hiRes, "unfolded_lamp_template");
+    else if (format === 'stl') {
+      const exportRes = 12.0;
+      downloadCanvasAsSTL(hiRes, "unfolded_lamp_template", thickness, exportRes);
+    }
     else downloadCanvasAsImage(hiRes, "unfolded_lamp_template", format);
   };
 
@@ -386,7 +396,8 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
       offsetX,
       offsetY,
       preprocessSilhouette,
-      selectedFormats
+      selectedFormats,
+      thickness
     );
   };
 
@@ -542,6 +553,16 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                 step="0.1"
               />
             </div>
+
+            <div className="input-group">
+              <label>Thickness (mm) [3D STL]</label>
+              <input 
+                type="number" 
+                value={thickness} 
+                onChange={(e) => setThickness(parseFloat(e.target.value) || 1)} 
+                step="0.1"
+              />
+            </div>
             
             <div className="input-group">
               <label>Panel Type</label>
@@ -664,6 +685,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                 <button className="btn btn-secondary" onClick={() => handleExportTarget('pdf')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-file-pdf"></i> PDF</button>
                 <button className="btn btn-secondary" onClick={() => handleExportTarget('png')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-file-image"></i> PNG</button>
                 <button className="btn btn-secondary" onClick={() => handleExportTarget('jpg')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-file-image"></i> JPG</button>
+                <button className="btn btn-secondary" onClick={() => handleExportTarget('stl')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-cube"></i> STL</button>
               </div>
             </div>
           </div>
@@ -684,6 +706,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                 <button className="btn btn-secondary" onClick={() => handleExportTemplate('pdf')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-file-pdf"></i> PDF</button>
                 <button className="btn btn-secondary" onClick={() => handleExportTemplate('png')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-file-image"></i> PNG</button>
                 <button className="btn btn-secondary" onClick={() => handleExportTemplate('jpg')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-file-image"></i> JPG</button>
+                <button className="btn btn-secondary" onClick={() => handleExportTemplate('stl')} style={{ padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, borderColor: 'rgba(0, 240, 255, 0.35)', color: 'var(--primary)' }}><i className="fa-solid fa-cube"></i> STL</button>
               </div>
             </div>
           </div>
@@ -759,6 +782,22 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                 <input 
                   type="checkbox" 
                   checked={selectedFormats.jpg} 
+                  onChange={() => {}} 
+                  style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
+                />
+              </div>
+
+              <div 
+                className={`format-option-row ${selectedFormats.stl ? 'active' : ''}`}
+                onClick={() => setSelectedFormats({ ...selectedFormats, stl: !selectedFormats.stl })}
+              >
+                <div>
+                  <div className="format-label-title">STL 3D Models</div>
+                  <div className="format-label-desc">Extruded watertight solids ready for 3D printing.</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={selectedFormats.stl} 
                   onChange={() => {}} 
                   style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
                 />

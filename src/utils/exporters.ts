@@ -1,8 +1,26 @@
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import { getCV } from './opencv';
-import { drawContoursToCanvas, projectWallPanel, assembleCrossFoldLayout } from './projector';
+import { drawContoursToCanvas, projectWallPanel, assembleCrossFoldLayout, extrudePanelToSTL } from './projector';
 import type { PanelResult } from './projector';
+
+export function downloadCanvasAsSTL(canvas: HTMLCanvasElement, filename: string, thicknessMm: number, pixelsPerMm: number) {
+  let ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  let imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let w = canvas.width;
+  let h = canvas.height;
+  let panelData = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    panelData[i] = imgData.data[i * 4]; // Red channel
+  }
+  let arrayBuffer = extrudePanelToSTL(panelData, w, h, thicknessMm, pixelsPerMm);
+  let blob = new Blob([arrayBuffer], { type: "application/octet-stream" });
+  let link = document.createElement('a');
+  link.download = `${filename}.stl`;
+  link.href = URL.createObjectURL(blob);
+  link.click();
+}
 
 export function downloadCanvasAsImage(canvas: HTMLCanvasElement, filename: string, format: 'png' | 'jpg') {
   let dataUrl: string;
@@ -125,7 +143,8 @@ export function exportZipArchive(
   offset_x: number,
   offset_y: number,
   preprocessSilhouetteFn: any,
-  formats: { svg: boolean; pdf: boolean; png: boolean; jpg: boolean }
+  formats: { svg: boolean; pdf: boolean; png: boolean; jpg: boolean; stl: boolean },
+  thickness_mm: number
 ) {
   const cv = getCV();
   if (!cv) return;
@@ -244,6 +263,25 @@ export function exportZipArchive(
     }
   }
 
+  function addPanelSTLToZip(panelName: string, panelObj: PanelResult, pixelsPerMm: number) {
+    let arrayBuffer = extrudePanelToSTL(panelObj.data, panelObj.width, panelObj.height, thickness_mm, pixelsPerMm);
+    zip.file(`${panelName}.stl`, arrayBuffer);
+  }
+
+  function addTargetSTLToZip(canvasName: string, canvasElement: HTMLCanvasElement) {
+    let ctx = canvasElement.getContext('2d')!;
+    let imgData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+    let w = canvasElement.width;
+    let h = canvasElement.height;
+    let panelData = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) {
+      panelData[i] = imgData.data[i * 4];
+    }
+    let targetPxPerMm = w / target_w;
+    let arrayBuffer = extrudePanelToSTL(panelData, w, h, thickness_mm, targetPxPerMm);
+    zip.file(`${canvasName}.stl`, arrayBuffer);
+  }
+
   let exportRes = 12.0; // 12 pixels/mm
   
   let src = cv.imread(rawTargetImage);
@@ -285,6 +323,26 @@ export function exportZipArchive(
   addCanvasToZip("wall_bottom", createPanelCanvas(hiResWallBottom));
   addCanvasToZip("cross_fold_layout", hiResCrossCanvas);
   addCanvasToZip("preprocessed_target", hiResTargetCanvas);
+
+  if (formats.stl) {
+    addPanelSTLToZip("wall_left", hiResWallLeft, exportRes);
+    addPanelSTLToZip("wall_right", hiResWallRight, exportRes);
+    addPanelSTLToZip("wall_top", hiResWallTop, exportRes);
+    addPanelSTLToZip("wall_bottom", hiResWallBottom, exportRes);
+    addTargetSTLToZip("preprocessed_target", hiResTargetCanvas);
+    
+    // Extrude cross layout
+    let crossCtx = hiResCrossCanvas.getContext('2d')!;
+    let crossImgData = crossCtx.getImageData(0, 0, hiResCrossCanvas.width, hiResCrossCanvas.height);
+    let crossW = hiResCrossCanvas.width;
+    let crossH = hiResCrossCanvas.height;
+    let crossPanelData = new Uint8Array(crossW * crossH);
+    for (let i = 0; i < crossW * crossH; i++) {
+      crossPanelData[i] = crossImgData.data[i * 4];
+    }
+    let crossArrayBuffer = extrudePanelToSTL(crossPanelData, crossW, crossH, thickness_mm, exportRes);
+    zip.file("cross_fold_layout.stl", crossArrayBuffer);
+  }
   
   src.delete(); srcGray.delete(); preprocessedMat.delete(); threshMat.delete(); contours.delete(); hierarchy.delete();
   

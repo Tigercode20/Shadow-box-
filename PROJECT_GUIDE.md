@@ -62,3 +62,12 @@ Where $dc$ and $dr$ represent fractional offsets between pixel coordinates, and 
 
 ### SVG Path Construction
 Contours are extracted using OpenCV's `cv.findContours` hierarchically. Outer contours represent borders (colored black), whereas nested child contours are treated as cutout holes (colored white), rendered into perfect vector SVG path strings (`<path d="..." />`).
+
+### 🖨️ 3D STL Mesh Extrusion
+For 3D printing, 2D binary projection panels are extruded into 3D watertight solid meshes (`.stl`).
+- **Voxel/Pixel-level Triangulation**: Each solid pixel is represented as a 3D rectangular box (prism) of size $W_{pixel} \times H_{pixel} \times T_{thickness}$ (mm).
+- **Face Optimization**:
+  - **Front Face** ($Z = \text{thickness}$): Rendered for every solid pixel.
+  - **Back Face** ($Z = 0$): Rendered for every solid pixel.
+  - **Side Faces** ($X$, $Y$ boundaries): Rendered only when a solid pixel shares an edge with an empty pixel (or boundary). This guarantees a watertight manifold model with minimal triangle counts.
+

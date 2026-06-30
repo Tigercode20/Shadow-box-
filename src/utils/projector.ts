@@ -407,3 +407,114 @@ function drawSingleContour(ctx: CanvasRenderingContext2D, contour: any) {
   }
   ctx.closePath();
 }
+
+export function extrudePanelToSTL(
+  panelData: Uint8Array,
+  width: number,
+  height: number,
+  thicknessMm: number,
+  pixelsPerMm: number
+): ArrayBuffer {
+  const isSolid = (r: number, c: number) => {
+    if (r < 0 || r >= height || c < 0 || c >= width) return false;
+    return panelData[r * width + c] < 128;
+  };
+
+  const pxSize = 1.0 / pixelsPerMm;
+
+  let numTriangles = 0;
+  for (let r = 0; r < height; r++) {
+    for (let c = 0; c < width; c++) {
+      if (isSolid(r, c)) {
+        numTriangles += 4; // Front & Back face quads (2 triangles each)
+        if (!isSolid(r - 1, c)) numTriangles += 2; // Top
+        if (!isSolid(r + 1, c)) numTriangles += 2; // Bottom
+        if (!isSolid(r, c - 1)) numTriangles += 2; // Left
+        if (!isSolid(r, c + 1)) numTriangles += 2; // Right
+      }
+    }
+  }
+
+  const bufferSize = 80 + 4 + numTriangles * 50;
+  const buffer = new ArrayBuffer(bufferSize);
+  const view = new DataView(buffer);
+
+  // Header (80 bytes empty)
+  // Number of triangles
+  view.setUint32(80, numTriangles, true);
+
+  let offset = 84;
+
+  const writeTriangle = (
+    nx: number, ny: number, nz: number,
+    v1x: number, v1y: number, v1z: number,
+    v2x: number, v2y: number, v2z: number,
+    v3x: number, v3y: number, v3z: number
+  ) => {
+    view.setFloat32(offset, nx, true);
+    view.setFloat32(offset + 4, ny, true);
+    view.setFloat32(offset + 8, nz, true);
+    
+    view.setFloat32(offset + 12, v1x, true);
+    view.setFloat32(offset + 16, v1y, true);
+    view.setFloat32(offset + 20, v1z, true);
+    
+    view.setFloat32(offset + 24, v2x, true);
+    view.setFloat32(offset + 28, v2y, true);
+    view.setFloat32(offset + 32, v2z, true);
+    
+    view.setFloat32(offset + 36, v3x, true);
+    view.setFloat32(offset + 40, v3y, true);
+    view.setFloat32(offset + 44, v3z, true);
+    
+    view.setUint16(offset + 48, 0, true);
+    offset += 50;
+  };
+
+  for (let r = 0; r < height; r++) {
+    for (let c = 0; c < width; c++) {
+      if (isSolid(r, c)) {
+        const x1 = c * pxSize;
+        const x2 = (c + 1) * pxSize;
+        const y1 = (height - 1 - r) * pxSize;
+        const y2 = (height - r) * pxSize;
+        const z1 = 0;
+        const z2 = thicknessMm;
+
+        // Back Face (Facing -Z)
+        writeTriangle(0, 0, -1, x1, y1, z1, x1, y2, z1, x2, y2, z1);
+        writeTriangle(0, 0, -1, x1, y1, z1, x2, y2, z1, x2, y1, z1);
+
+        // Front Face (Facing +Z)
+        writeTriangle(0, 0, 1, x1, y1, z2, x2, y2, z2, x1, y2, z2);
+        writeTriangle(0, 0, 1, x1, y1, z2, x2, y1, z2, x2, y2, z2);
+
+        // Top Side (Facing +Y)
+        if (!isSolid(r - 1, c)) {
+          writeTriangle(0, 1, 0, x1, y2, z1, x1, y2, z2, x2, y2, z2);
+          writeTriangle(0, 1, 0, x1, y2, z1, x2, y2, z2, x2, y2, z1);
+        }
+
+        // Bottom Side (Facing -Y)
+        if (!isSolid(r + 1, c)) {
+          writeTriangle(0, -1, 0, x1, y1, z1, x2, y1, z2, x1, y1, z2);
+          writeTriangle(0, -1, 0, x1, y1, z1, x2, y1, z1, x2, y1, z2);
+        }
+
+        // Left Side (Facing -X)
+        if (!isSolid(r, c - 1)) {
+          writeTriangle(-1, 0, 0, x1, y1, z1, x1, y1, z2, x1, y2, z2);
+          writeTriangle(-1, 0, 0, x1, y1, z1, x1, y2, z2, x1, y2, z1);
+        }
+
+        // Right Side (Facing +X)
+        if (!isSolid(r, c + 1)) {
+          writeTriangle(1, 0, 0, x2, y1, z1, x2, y2, z2, x2, y1, z2);
+          writeTriangle(1, 0, 0, x2, y1, z1, x2, y2, z1, x2, y2, z2);
+        }
+      }
+    }
+  }
+
+  return buffer;
+}

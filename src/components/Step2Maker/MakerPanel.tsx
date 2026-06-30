@@ -1,19 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCV } from '../../utils/opencv';
-import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas } from '../../utils/projector';
+import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas, extrudePanelToSTL } from '../../utils/projector';
 import { downloadCanvasAsImage, downloadCanvasAsPDF, downloadCanvasAsSVG, downloadCanvasAsSTL, exportZipArchive } from '../../utils/exporters';
 import { SliderControl } from '../Common/SliderControl';
+import type { GeneratedStl } from '../../App';
 
 interface MakerPanelProps {
   active: boolean;
   rawSilhouetteCanvas: HTMLCanvasElement | null;
   setRawSilhouetteCanvas: (canvas: HTMLCanvasElement | null) => void;
+  onStlsGenerated: (stls: GeneratedStl[]) => void;
 }
 
 export const MakerPanel: React.FC<MakerPanelProps> = ({
   active,
   rawSilhouetteCanvas,
   setRawSilhouetteCanvas,
+  onStlsGenerated,
 }) => {
   // Placement
   const [scale, setScale] = useState<number>(100);
@@ -160,6 +163,62 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
         ctx.drawImage(crossLayoutCanvas, 0, 0);
       }
     }
+
+    // Generate 3D STL models for interactive viewer
+    const stlList: GeneratedStl[] = [];
+
+    const stlLeft = extrudePanelToSTL(
+      leftPanel.data, leftPanel.width, leftPanel.height, thickness, resolution,
+      'left', boxW, boxH, boxD, lightZ, frontZ
+    );
+    stlList.push({ name: 'Left Wall', buffer: stlLeft });
+
+    const stlRight = extrudePanelToSTL(
+      rightPanel.data, rightPanel.width, rightPanel.height, thickness, resolution,
+      'right', boxW, boxH, boxD, lightZ, frontZ
+    );
+    stlList.push({ name: 'Right Wall', buffer: stlRight });
+
+    const stlTop = extrudePanelToSTL(
+      topPanel.data, topPanel.width, topPanel.height, thickness, resolution,
+      'top', boxW, boxH, boxD, lightZ, frontZ
+    );
+    stlList.push({ name: 'Top Wall', buffer: stlTop });
+
+    const stlBottom = extrudePanelToSTL(
+      bottomPanel.data, bottomPanel.width, bottomPanel.height, thickness, resolution,
+      'bottom', boxW, boxH, boxD, lightZ, frontZ
+    );
+    stlList.push({ name: 'Bottom Wall', buffer: stlBottom });
+
+    if (targetCanvas) {
+      const targetCtx = targetCanvas.getContext('2d')!;
+      const targetImgData = targetCtx.getImageData(0, 0, targetCanvas.width, targetCanvas.height);
+      const targetWPixels = targetCanvas.width;
+      const targetHPixels = targetCanvas.height;
+      const targetPanelData = new Uint8Array(targetWPixels * targetHPixels);
+      for (let i = 0; i < targetWPixels * targetHPixels; i++) {
+        targetPanelData[i] = targetImgData.data[i * 4];
+      }
+      const targetPxPerMm = targetWPixels / targetW;
+      const stlTarget = extrudePanelToSTL(targetPanelData, targetWPixels, targetHPixels, thickness, targetPxPerMm);
+      stlList.push({ name: 'Preprocessed Silhouette', buffer: stlTarget });
+    }
+
+    if (crossLayoutCanvas) {
+      const crossCtx = crossLayoutCanvas.getContext('2d')!;
+      const crossImgData = crossCtx.getImageData(0, 0, crossLayoutCanvas.width, crossLayoutCanvas.height);
+      const crossW = crossLayoutCanvas.width;
+      const crossH = crossLayoutCanvas.height;
+      const crossPanelData = new Uint8Array(crossW * crossH);
+      for (let i = 0; i < crossW * crossH; i++) {
+        crossPanelData[i] = crossImgData.data[i * 4];
+      }
+      const stlCross = extrudePanelToSTL(crossPanelData, crossW, crossH, thickness, resolution);
+      stlList.push({ name: 'Unfolded Template', buffer: stlCross });
+    }
+
+    onStlsGenerated(stlList);
 
     src.delete();
     srcGray.delete();

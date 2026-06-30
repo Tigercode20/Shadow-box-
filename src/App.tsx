@@ -6,9 +6,15 @@ import { MakerPanel } from './components/Step2Maker/MakerPanel';
 import { StlViewerPanel } from './components/Step3StlViewer/StlViewerPanel';
 import { isOpenCvLoaded } from './utils/opencv';
 
+export interface GeneratedStl {
+  name: string;
+  buffer: ArrayBuffer;
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<'vectorizer' | 'maker' | 'stl-viewer'>('vectorizer');
   const [opencvLoaded, setOpencvLoaded] = useState<boolean>(false);
+  const [generatedStls, setGeneratedStls] = useState<GeneratedStl[]>([]);
 
   // Vectorizer canvases
   const [vecOriginalCanvas, setVecOriginalCanvas] = useState<HTMLCanvasElement | null>(null);
@@ -65,9 +71,11 @@ function App() {
               active={activeTab === 'maker'}
               rawSilhouetteCanvas={rawSilhouetteCanvas}
               setRawSilhouetteCanvas={setRawSilhouetteCanvas}
+              onStlsGenerated={setGeneratedStls}
             />
             <StlViewerPanel
               active={activeTab === 'stl-viewer'}
+              generatedStls={generatedStls}
             />
           </div>
         </>

@@ -45,6 +45,13 @@ This document records the mistakes made, user complaints, and implementation rul
   - Replaced standard straight parallel extrusion for wall panels with **Ray-Aligned Slanted Extrusion** matching the physics of the point light source $S(0, 0, Z_{light})$.
   - Dynamically scale the inner face geometry by perspective scaling factor $t = 1.0 - \text{thickness} / (\text{boundary}/2)$ and project inner corner vertices relative to the spot light, resulting in perfectly slanted cutout walls that don't block the light rays.
 
+### 7. STL Viewer Tab Syncing (Dynamic STL Loading)
+- **Complaint**: *"التصاميم عملت genrate ماتنقلتش ل صفحه stl viewer عاوز الملفات يتم عرضها و لو تمام يبقي في امكانيه التحميل للملفات منفصله"* (The generated files were not transferred to the STL viewer tab. I want the generated files to be shown there, with the option to download them individually).
+- **Resolution**:
+  - Implemented a shared React state (`generatedStls`) in `App.tsx` mapped to Step 2 calculations.
+  - When the user generates panels, the local STL buffers for the 6 panels are calculated instantly at preview resolution and stored in state.
+  - In Step 3 (STL Viewer), the sidebar displays the list of "Generated Panels". Clicking any panel loads it in 3D, and each has an individual `[Download]` button.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

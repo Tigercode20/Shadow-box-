@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { parseSTL } from '../../utils/stlParser';
+import type { GeneratedStl } from '../../App';
 
 interface StlViewerPanelProps {
   active: boolean;
+  generatedStls: GeneratedStl[];
 }
 
-export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active }) => {
+export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generatedStls }) => {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [fileInfo, setFileInfo] = useState<{
     name: string;
@@ -18,10 +20,40 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active }) => {
   } | null>(null);
 
   const [dragActive, setDragActive] = useState<boolean>(false);
+  const [selectedStlName, setSelectedStlName] = useState<string>('');
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const meshRef = useRef<THREE.Mesh | null>(null);
+
+  // Auto-load first model when tab is activated or STLs regenerate
+  useEffect(() => {
+    if (active && generatedStls.length > 0 && !selectedStlName) {
+      const first = generatedStls[0];
+      setTimeout(() => {
+        loadSTLBuffer(first.buffer, first.name);
+        setSelectedStlName(first.name);
+      }, 100);
+    }
+  }, [active, generatedStls, selectedStlName]);
+
+  // Keep selectedStlName in sync when generatedStls are updated
+  useEffect(() => {
+    if (active && generatedStls.length > 0 && selectedStlName) {
+      const matched = generatedStls.find(x => x.name === selectedStlName);
+      if (matched) {
+        loadSTLBuffer(matched.buffer, matched.name);
+      }
+    }
+  }, [generatedStls]);
+
+  const downloadSTL = (buffer: ArrayBuffer, name: string) => {
+    const blob = new Blob([buffer], { type: 'application/octet-stream' });
+    const link = document.createElement('a');
+    link.download = `${name.toLowerCase().replace(/\s+/g, '_')}.stl`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  };
 
   useEffect(() => {
     if (!active || !mountRef.current) return;
@@ -190,6 +222,52 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active }) => {
     <div className={`workspace-panel ${active ? 'active' : ''}`} id="panel-stl-viewer" style={{ padding: '0', display: active ? 'flex' : 'none', height: 'calc(100vh - 70px)' }}>
       {/* Sidebar Metadata */}
       <div className="sidebar" style={{ width: '320px', flexShrink: 0, padding: '24px', borderRight: '1px solid var(--card-border)', background: 'rgba(11, 11, 16, 0.98)', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
+        {generatedStls.length > 0 && (
+          <div className="card">
+            <div className="card-title">
+              <i className="fa-solid fa-list-check" style={{ color: 'var(--primary)' }}></i> Generated Panels
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+              {generatedStls.map((stl) => (
+                <div 
+                  key={stl.name}
+                  className={`format-option-row ${selectedStlName === stl.name ? 'active' : ''}`}
+                  onClick={() => {
+                    loadSTLBuffer(stl.buffer, stl.name);
+                    setSelectedStlName(stl.name);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{stl.name}</span>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadSTL(stl.buffer, stl.name);
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '0.75rem',
+                      borderColor: 'rgba(0, 240, 255, 0.25)',
+                      color: 'var(--primary)'
+                    }}
+                  >
+                    <i className="fa-solid fa-download"></i>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="card">
           <div className="card-title">
             <i className="fa-solid fa-cube" style={{ color: 'var(--primary)' }}></i> 3D STL Inspector

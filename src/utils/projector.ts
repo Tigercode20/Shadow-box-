@@ -1,4 +1,5 @@
 import { getCV } from './opencv';
+import * as THREE from 'three';
 
 export interface PanelResult {
   data: Uint8Array;
@@ -421,12 +422,84 @@ export function extrudePanelToSTL(
   lightZ?: number,
   frontZ?: number
 ): ArrayBuffer {
-  const isSolid = (r: number, c: number) => {
-    if (r < 0 || r >= height || c < 0 || c >= width) return false;
-    return panelData[r * width + c] < 128;
+  const cv = getCV();
+  if (!cv) return new ArrayBuffer(84);
+
+  // Load into OpenCV mat
+  const mat = cv.matFromArray(height, width, cv.CV_8UC1, Array.from(panelData));
+  const threshMat = new cv.Mat();
+  cv.threshold(mat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
+
+  const contours = new cv.MatVector();
+  const hierarchy = new cv.Mat();
+  cv.findContours(threshMat, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+
+  const shapes: THREE.Shape[] = [];
+  const shapeMap = new Map<number, THREE.Shape>();
+  const holeMap = new Map<number, THREE.Path>();
+
+  // Filter out tiny noise and build shapes/holes
+  for (let i = 0; i < contours.size(); i++) {
+    const contour = contours.get(i);
+    if (contour.rows < 3) continue;
+
+    // Filter noise: skip components with area < 15 px (approx 0.1 mm^2 at 12 px/mm)
+    const area = cv.contourArea(contour);
+    if (area < 15) continue;
+
+    const h = hierarchy.intPtr(0, i);
+    const parent = h[3];
+
+    const points: THREE.Vector2[] = [];
+    for (let j = 0; j < contour.rows; j++) {
+      const c_val = contour.data32S[j * 2];
+      const r_val = contour.data32S[j * 2 + 1];
+      // Flip Y so it increases upwards in Cartesian space
+      points.push(new THREE.Vector2(c_val, height - r_val));
+    }
+
+    if (parent === -1) {
+      const shape = new THREE.Shape(points);
+      shapes.push(shape);
+      shapeMap.set(i, shape);
+    } else {
+      const path = new THREE.Path(points);
+      holeMap.set(i, path);
+    }
+  }
+
+  // Associate holes to parent shapes
+  for (let i = 0; i < contours.size(); i++) {
+    const h = hierarchy.intPtr(0, i);
+    const parent = h[3];
+    if (parent !== -1) {
+      const parentShape = shapeMap.get(parent);
+      const holePath = holeMap.get(i);
+      if (parentShape && holePath) {
+        parentShape.holes.push(holePath);
+      }
+    }
+  }
+
+  // Cleanup OpenCV
+  mat.delete();
+  threshMat.delete();
+  contours.delete();
+  hierarchy.delete();
+
+  if (shapes.length === 0) {
+    return new ArrayBuffer(84); // Empty STL
+  }
+
+  // Extrude shapes using Three.js
+  const extrudeSettings = {
+    depth: thicknessMm,
+    bevelEnabled: false
   };
 
-  const pxSize = 1.0 / pixelsPerMm;
+  const geometry = new THREE.ExtrudeGeometry(shapes, extrudeSettings);
+  const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
+
   const isSlanted = !!(wallName && boxW && boxH && boxD && lightZ !== undefined && frontZ !== undefined);
   let t = 1.0;
   if (isSlanted) {
@@ -437,80 +510,86 @@ export function extrudePanelToSTL(
     }
   }
 
-  const getCornerCoords = (cg: number, rg: number) => {
-    let x_out = 0;
-    let y_out = 0;
-    let x_in = 0;
-    let y_in = 0;
+  // Apply slant and millimeter scaling
+  for (let i = 0; i < posAttr.count; i++) {
+    const x_out = posAttr.getX(i);
+    const y_out = posAttr.getY(i);
+    const z = posAttr.getZ(i);
 
-    if (isSlanted) {
+    const cg = x_out;
+    const rg = height - y_out;
+
+    let x_final = x_out;
+    let y_final = y_out;
+
+    if (z > 0 && isSlanted) {
       if (wallName === 'left' || wallName === 'right') {
         const Z_wall = (frontZ! + boxD!) - (cg / width) * boxD!;
         const Y_wall = (boxH! / 2.0) - (rg / height) * boxH!;
         
-        x_out = Z_wall - frontZ!;
-        y_out = Y_wall + boxH! / 2.0;
-
         const Z_in = lightZ! + t * (Z_wall - lightZ!);
         const Y_in = t * Y_wall;
 
-        x_in = Z_in - frontZ!;
-        y_in = Y_in + boxH! / 2.0;
+        x_final = (Z_in - frontZ!) * pixelsPerMm;
+        y_final = (Y_in + boxH! / 2.0) * pixelsPerMm;
       } else {
         const X_wall = (-boxW! / 2.0) + (cg / width) * boxW!;
         const Z_wall = (frontZ! + boxD!) - (rg / height) * boxD!;
 
-        x_out = X_wall + boxW! / 2.0;
-        y_out = Z_wall - frontZ!;
-
         const X_in = t * X_wall;
         const Z_in = lightZ! + t * (Z_wall - lightZ!);
 
-        x_in = X_in + boxW! / 2.0;
-        y_in = Z_in - frontZ!;
-      }
-    } else {
-      x_out = cg * pxSize;
-      y_out = (height - rg) * pxSize;
-      x_in = x_out;
-      y_in = y_out;
-    }
-
-    return { x_out, y_out, x_in, y_in };
-  };
-
-  let numTriangles = 0;
-  for (let r = 0; r < height; r++) {
-    for (let c = 0; c < width; c++) {
-      if (isSolid(r, c)) {
-        numTriangles += 4; // Front & Back face quads (2 triangles each)
-        if (!isSolid(r - 1, c)) numTriangles += 2; // Top
-        if (!isSolid(r + 1, c)) numTriangles += 2; // Bottom
-        if (!isSolid(r, c - 1)) numTriangles += 2; // Left
-        if (!isSolid(r, c + 1)) numTriangles += 2; // Right
+        x_final = (X_in + boxW! / 2.0) * pixelsPerMm;
+        y_final = (Z_in - frontZ!) * pixelsPerMm;
       }
     }
+
+    // Scale coordinates back to mm
+    posAttr.setX(i, x_final / pixelsPerMm);
+    posAttr.setY(i, y_final / pixelsPerMm);
+    // Z is already in mm
   }
+
+  geometry.computeVertexNormals();
+
+  // Convert BufferGeometry to Binary STL
+  const normAttr = geometry.getAttribute('normal') as THREE.BufferAttribute;
+  const numTriangles = posAttr.count / 3;
 
   const bufferSize = 80 + 4 + numTriangles * 50;
   const buffer = new ArrayBuffer(bufferSize);
   const view = new DataView(buffer);
 
-  // Number of triangles
+  // Write number of triangles
   view.setUint32(80, numTriangles, true);
 
   let offset = 84;
+  for (let i = 0; i < posAttr.count; i += 3) {
+    let nx = 0, ny = 0, nz = 0;
+    if (normAttr) {
+      nx = normAttr.getX(i);
+      ny = normAttr.getY(i);
+      nz = normAttr.getZ(i);
+    }
+    
+    const v1x = posAttr.getX(i);
+    const v1y = posAttr.getY(i);
+    const v1z = posAttr.getZ(i);
+    
+    const v2x = posAttr.getX(i + 1);
+    const v2y = posAttr.getY(i + 1);
+    const v2z = posAttr.getZ(i + 1);
+    
+    const v3x = posAttr.getX(i + 2);
+    const v3y = posAttr.getY(i + 2);
+    const v3z = posAttr.getZ(i + 2);
 
-  const writeTriangle = (
-    nx: number, ny: number, nz: number,
-    v1x: number, v1y: number, v1z: number,
-    v2x: number, v2y: number, v2z: number,
-    v3x: number, v3y: number, v3z: number
-  ) => {
+    // Write normal
     view.setFloat32(offset, nx, true);
     view.setFloat32(offset + 4, ny, true);
     view.setFloat32(offset + 8, nz, true);
     
+    // Write V1, V2, V3
     view.setFloat32(offset + 12, v1x, true);
     view.setFloat32(offset + 16, v1y, true);
     view.setFloat32(offset + 20, v1z, true);
@@ -522,54 +601,11 @@ export function extrudePanelToSTL(
     view.setFloat32(offset + 36, v3x, true);
     view.setFloat32(offset + 40, v3y, true);
     view.setFloat32(offset + 44, v3z, true);
-    
+
     view.setUint16(offset + 48, 0, true);
     offset += 50;
-  };
-
-  for (let r = 0; r < height; r++) {
-    for (let c = 0; c < width; c++) {
-      if (isSolid(r, c)) {
-        // Retrieve the 4 corner points
-        const p00 = getCornerCoords(c, r);
-        const p10 = getCornerCoords(c + 1, r);
-        const p01 = getCornerCoords(c, r + 1);
-        const p11 = getCornerCoords(c + 1, r + 1);
-
-        // 1. Back Face (Z = 0, facing -Z)
-        writeTriangle(0, 0, -1, p00.x_out, p00.y_out, 0, p01.x_out, p01.y_out, 0, p11.x_out, p11.y_out, 0);
-        writeTriangle(0, 0, -1, p00.x_out, p00.y_out, 0, p11.x_out, p11.y_out, 0, p10.x_out, p10.y_out, 0);
-
-        // 2. Front Face (Z = thicknessMm, facing +Z)
-        writeTriangle(0, 0, 1, p00.x_in, p00.y_in, thicknessMm, p11.x_in, p11.y_in, thicknessMm, p01.x_in, p01.y_in, thicknessMm);
-        writeTriangle(0, 0, 1, p00.x_in, p00.y_in, thicknessMm, p10.x_in, p10.y_in, thicknessMm, p11.x_in, p11.y_in, thicknessMm);
-
-        // 3. Top Side (Facing +Y)
-        if (!isSolid(r - 1, c)) {
-          writeTriangle(0, 1, 0, p00.x_out, p00.y_out, 0, p10.x_in, p10.y_in, thicknessMm, p10.x_out, p10.y_out, 0);
-          writeTriangle(0, 1, 0, p00.x_out, p00.y_out, 0, p00.x_in, p00.y_in, thicknessMm, p10.x_in, p10.y_in, thicknessMm);
-        }
-
-        // 4. Bottom Side (Facing -Y)
-        if (!isSolid(r + 1, c)) {
-          writeTriangle(0, -1, 0, p01.x_out, p01.y_out, 0, p11.x_out, p11.y_out, 0, p11.x_in, p11.y_in, thicknessMm);
-          writeTriangle(0, -1, 0, p01.x_out, p01.y_out, 0, p11.x_in, p11.y_in, thicknessMm, p01.x_in, p01.y_in, thicknessMm);
-        }
-
-        // 5. Left Side (Facing -X)
-        if (!isSolid(r, c - 1)) {
-          writeTriangle(-1, 0, 0, p00.x_out, p00.y_out, 0, p01.x_in, p01.y_in, thicknessMm, p01.x_out, p01.y_out, 0);
-          writeTriangle(-1, 0, 0, p00.x_out, p00.y_out, 0, p00.x_in, p00.y_in, thicknessMm, p01.x_in, p01.y_in, thicknessMm);
-        }
-
-        // 6. Right Side (Facing +X)
-        if (!isSolid(r, c + 1)) {
-          writeTriangle(1, 0, 0, p10.x_out, p10.y_out, 0, p11.x_out, p11.y_out, 0, p11.x_in, p11.y_in, thicknessMm);
-          writeTriangle(1, 0, 0, p10.x_out, p10.y_out, 0, p11.x_in, p11.y_in, thicknessMm, p10.x_in, p10.y_in, thicknessMm);
-        }
-      }
-    }
   }
 
+  geometry.dispose();
   return buffer;
 }

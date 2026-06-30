@@ -52,6 +52,14 @@ This document records the mistakes made, user complaints, and implementation rul
   - When the user generates panels, the local STL buffers for the 6 panels are calculated instantly at preview resolution and stored in state.
   - In Step 3 (STL Viewer), the sidebar displays the list of "Generated Panels". Clicking any panel loads it in 3D, and each has an individual `[Download]` button.
 
+### 8. Smooth Vector Contour-based 3D STL Extrusion
+- **Complaint**: *"التصميم كله بيكسيلز و كوالتي قليله و في نقاط طائره مش منطقيه للطباعه"* (The design is pixelated and low quality, and has floating points that are not printable).
+- **Resolution**:
+  - Replaced voxel/pixel block extrusion with **Smooth Vector Contour-based Extrusion**.
+  - Extract exact 2D contours from projected silhouette mats using OpenCV's `cv.findContours` and build continuous nested `THREE.Shape` geometry paths (auto-mapping outer borders and inner hole paths).
+  - Filter out floating noise and small components by setting a minimum area threshold (ignoring islands with area < 15 px).
+  - Extrude the shapes cleanly using Three.js `THREE.ExtrudeGeometry` (which yields perfectly smooth curves/walls and watertight triangulation) and export to binary STL.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

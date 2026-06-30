@@ -124,18 +124,13 @@ export function exportZipArchive(
   img_scale: number,
   offset_x: number,
   offset_y: number,
-  preprocessSilhouetteFn: any
+  preprocessSilhouetteFn: any,
+  formats: { svg: boolean; pdf: boolean; png: boolean; jpg: boolean }
 ) {
   const cv = getCV();
   if (!cv) return;
   
   let zip = new JSZip();
-  
-  function addCanvasToZip(canvasName: string, canvasElement: HTMLCanvasElement) {
-    let dataUrl = canvasElement.toDataURL("image/png");
-    let dataBase64 = dataUrl.split(',')[1];
-    zip.file(`${canvasName}.png`, dataBase64, {base64: true});
-  }
   
   function createPanelCanvas(panelObj: PanelResult) {
     let c = document.createElement('canvas');
@@ -154,6 +149,99 @@ export function exportZipArchive(
       ctx.putImageData(imgData, 0, 0);
     }
     return c;
+  }
+
+  function convertCanvasToSVG(canvasElement: HTMLCanvasElement): string {
+    let src = cv.imread(canvasElement);
+    let srcGray = new cv.Mat();
+    cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
+    
+    let thresh = new cv.Mat();
+    cv.threshold(srcGray, thresh, 127, 255, cv.THRESH_BINARY_INV);
+    
+    let contours = new cv.MatVector();
+    let hierarchy = new cv.Mat();
+    cv.findContours(thresh, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
+    
+    let width = canvasElement.width;
+    let height = canvasElement.height;
+    
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">\n`;
+    svg += `  <rect width="100%" height="100%" fill="white"/>\n`;
+    
+    for (let i = 0; i < contours.size(); i++) {
+      let contour = contours.get(i);
+      let h = hierarchy.intPtr(0, i);
+      let parent = h[3];
+      
+      if (contour.rows > 0) {
+        let pathData = "";
+        let p0_x = contour.data32S[0];
+        let p0_y = contour.data32S[1];
+        pathData += `M ${p0_x} ${p0_y}`;
+        for (let j = 1; j < contour.rows; j++) {
+          let x = contour.data32S[j * 2];
+          let y = contour.data32S[j * 2 + 1];
+          pathData += ` L ${x} ${y}`;
+        }
+        pathData += " Z";
+        
+        let fill = (parent === -1) ? "black" : "white";
+        svg += `  <path d="${pathData}" fill="${fill}" stroke="none"/>\n`;
+      }
+    }
+    
+    svg += "</svg>";
+    
+    src.delete(); srcGray.delete(); thresh.delete(); contours.delete(); hierarchy.delete();
+    return svg;
+  }
+
+  function addCanvasToZip(canvasName: string, canvasElement: HTMLCanvasElement) {
+    if (formats.png) {
+      let dataUrl = canvasElement.toDataURL("image/png");
+      let dataBase64 = dataUrl.split(',')[1];
+      zip.file(`${canvasName}.png`, dataBase64, {base64: true});
+    }
+    if (formats.jpg) {
+      let temp = document.createElement('canvas');
+      temp.width = canvasElement.width;
+      temp.height = canvasElement.height;
+      let ctx = temp.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, temp.width, temp.height);
+        ctx.drawImage(canvasElement, 0, 0);
+      }
+      let dataUrl = temp.toDataURL("image/jpeg", 0.95);
+      let dataBase64 = dataUrl.split(',')[1];
+      zip.file(`${canvasName}.jpg`, dataBase64, {base64: true});
+    }
+    if (formats.pdf) {
+      let temp = document.createElement('canvas');
+      temp.width = canvasElement.width;
+      temp.height = canvasElement.height;
+      let ctx = temp.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, temp.width, temp.height);
+        ctx.drawImage(canvasElement, 0, 0);
+      }
+      let imgData = temp.toDataURL("image/jpeg", 0.9);
+      let isLandscape = canvasElement.width > canvasElement.height;
+      let pdf = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvasElement.width, canvasElement.height]
+      });
+      pdf.addImage(imgData, 'JPEG', 0, 0, canvasElement.width, canvasElement.height);
+      let arrayBuffer = pdf.output('arraybuffer');
+      zip.file(`${canvasName}.pdf`, arrayBuffer);
+    }
+    if (formats.svg) {
+      let svgStr = convertCanvasToSVG(canvasElement);
+      zip.file(`${canvasName}.svg`, svgStr);
+    }
   }
 
   let exportRes = 12.0; // 12 pixels/mm

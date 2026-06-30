@@ -42,6 +42,13 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
   const [drawSlits, setDrawSlits] = useState<boolean>(false);
 
   const [crossCanvas, setCrossCanvas] = useState<HTMLCanvasElement | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [selectedFormats, setSelectedFormats] = useState({
+    svg: true,
+    pdf: true,
+    png: true,
+    jpg: true
+  });
 
   const targetCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const crossCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -378,7 +385,8 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
       scale,
       offsetX,
       offsetY,
-      preprocessSilhouette
+      preprocessSilhouette,
+      selectedFormats
     );
   };
 
@@ -631,7 +639,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
           <button className="btn btn-secondary" onClick={updateProjections}>
             <i className="fa-solid fa-play"></i> Generate
           </button>
-          <button className="btn" onClick={handleExportZip}>
+          <button className="btn" onClick={() => setIsModalOpen(true)}>
             <i className="fa-solid fa-file-zipper"></i> Export ZIP
           </button>
         </div>
@@ -681,6 +689,101 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Export Format Selector Modal */}
+      {isModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <i className="fa-solid fa-file-zipper" style={{ color: 'var(--primary)' }}></i>
+              <span>Select Export Formats</span>
+            </div>
+            
+            <div className="modal-body">
+              <div 
+                className={`format-option-row ${selectedFormats.svg ? 'active' : ''}`}
+                onClick={() => setSelectedFormats({ ...selectedFormats, svg: !selectedFormats.svg })}
+              >
+                <div>
+                  <div className="format-label-title">SVG Vector Contours</div>
+                  <div className="format-label-desc">Best for laser cutters, CNC routers, & Illustrator.</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={selectedFormats.svg} 
+                  onChange={() => {}} 
+                  style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
+                />
+              </div>
+
+              <div 
+                className={`format-option-row ${selectedFormats.pdf ? 'active' : ''}`}
+                onClick={() => setSelectedFormats({ ...selectedFormats, pdf: !selectedFormats.pdf })}
+              >
+                <div>
+                  <div className="format-label-title">PDF Document Layout</div>
+                  <div className="format-label-desc">Ideal for direct high-resolution printing.</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={selectedFormats.pdf} 
+                  onChange={() => {}} 
+                  style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
+                />
+              </div>
+
+              <div 
+                className={`format-option-row ${selectedFormats.png ? 'active' : ''}`}
+                onClick={() => setSelectedFormats({ ...selectedFormats, png: !selectedFormats.png })}
+              >
+                <div>
+                  <div className="format-label-title">PNG Raster Images</div>
+                  <div className="format-label-desc">Lossless transparency and clean details.</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={selectedFormats.png} 
+                  onChange={() => {}} 
+                  style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
+                />
+              </div>
+
+              <div 
+                className={`format-option-row ${selectedFormats.jpg ? 'active' : ''}`}
+                onClick={() => setSelectedFormats({ ...selectedFormats, jpg: !selectedFormats.jpg })}
+              >
+                <div>
+                  <div className="format-label-title">JPEG Compressed Images</div>
+                  <div className="format-label-desc">Standard image format for previews & sharing.</div>
+                </div>
+                <input 
+                  type="checkbox" 
+                  checked={selectedFormats.jpg} 
+                  onChange={() => {}} 
+                  style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
+              <button 
+                className="btn" 
+                onClick={() => {
+                  if (!Object.values(selectedFormats).some(v => v)) {
+                    alert("Please select at least one format!");
+                    return;
+                  }
+                  setIsModalOpen(false);
+                  handleExportZip();
+                }}
+              >
+                Export ZIP
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

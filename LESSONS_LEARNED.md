@@ -66,6 +66,12 @@ This document records the mistakes made, user complaints, and implementation rul
   - Implemented boundary check in `extrudePanelToSTL`: if a vertex lies on the outer rectangular border of the wall panel, its slant scale factor $t$ is forced to `1.0` (keeping it perfectly straight at a normal 90-degree angle to sit flush against the box frames).
   - Shifted the coordinates of the extruded mesh vertices so that the origin $(0,0,0)$ of the generated STL lies precisely at the center of the front-facing edge (which is the edge of the panel that contacts the front opening border).
 
+### 10. Contour Filtering and Shift-Aware Border Tolerance (Detail Restoration)
+- **Complaint**: *"في تصاميم اتشال منها تفاصيل و تصاميم باظت خالص"* (Some details were removed from the designs, and some designs got completely ruined).
+- **Resolution**:
+  - The previous high area noise filter (`area < 15 px`) removed thin lines of the silhouette at low preview resolutions, deleting details. Lowered the noise threshold to `2 px` to preserve all fine contours.
+  - Checked the `isOnBorder` condition on unslanted coordinates in millimeter space with a tolerance of `0.5 mm` before applying shifts/slants. This prevents the outer boundary of the panel from warping due to pixel approximations, keeping the outer edges perfectly rectangular and straight while allowing details to slant correctly.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

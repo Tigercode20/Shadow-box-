@@ -443,9 +443,9 @@ export function extrudePanelToSTL(
     const contour = contours.get(i);
     if (contour.rows < 3) continue;
 
-    // Filter noise: skip components with area < 15 px (approx 0.1 mm^2 at 12 px/mm)
+    // Filter noise: keep details but ignore tiny single-pixel artifacts (area < 2 px)
     const area = cv.contourArea(contour);
-    if (area < 15) continue;
+    if (area < 2) continue;
 
     const h = hierarchy.intPtr(0, i);
     const parent = h[3];
@@ -511,12 +511,36 @@ export function extrudePanelToSTL(
     const cg = x_out;
     const rg = height - y_out;
 
+    // 1. Calculate unslanted coordinates in millimeter space
+    const x_mm_unslanted = x_out / pixelsPerMm;
+    const y_mm_unslanted = y_out / pixelsPerMm;
+
+    // Shift unslanted coordinates temporarily to check physical outer borders
+    let x_mm_shifted = x_mm_unslanted;
+    let y_mm_shifted = y_mm_unslanted;
+    if (isSlanted) {
+      if (wallName === 'left' || wallName === 'right') {
+        y_mm_shifted = y_mm_unslanted - boxH! / 2.0;
+      } else if (wallName === 'top' || wallName === 'bottom') {
+        x_mm_shifted = x_mm_unslanted - boxW! / 2.0;
+      }
+    }
+
+    // 2. Check if the vertex lies on the outer boundary of the panel in millimeters (using 0.5 mm tolerance)
+    const eps = 0.5;
+    let isOnBorder = false;
+    if (isSlanted) {
+      if (wallName === 'left' || wallName === 'right') {
+        isOnBorder = (x_mm_shifted <= eps || x_mm_shifted >= boxD! - eps || y_mm_shifted <= -boxH!/2.0 + eps || y_mm_shifted >= boxH!/2.0 - eps);
+      } else if (wallName === 'top' || wallName === 'bottom') {
+        isOnBorder = (x_mm_shifted <= -boxW!/2.0 + eps || x_mm_shifted >= boxW!/2.0 - eps || y_mm_shifted <= eps || y_mm_shifted >= boxD! - eps);
+      }
+    }
+
+    // 3. Calculate final slanted coordinates if not on the border
     let x_final = x_out;
     let y_final = y_out;
 
-    // Check if the vertex lies on the outer boundary of the panel
-    const isOnBorder = (cg <= 1.5 || cg >= width - 1.5 || rg <= 1.5 || rg >= height - 1.5);
-    
     let t_val = 1.0;
     if (isSlanted && !isOnBorder) {
       if (wallName === 'left' || wallName === 'right') {
@@ -548,11 +572,11 @@ export function extrudePanelToSTL(
       }
     }
 
-    // Convert to millimeter space
+    // 4. Convert final coordinates to millimeter space
     let x_mm = x_final / pixelsPerMm;
     let y_mm = y_final / pixelsPerMm;
 
-    // Shift origin to the center of the front edge of the panel
+    // 5. Shift origin to the center of the front edge of the panel
     if (isSlanted) {
       if (wallName === 'left' || wallName === 'right') {
         y_mm = y_mm - boxH! / 2.0;

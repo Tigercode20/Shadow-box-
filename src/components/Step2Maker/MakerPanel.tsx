@@ -382,7 +382,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
       useCustomShape,
       groundBottom,
       drawSlits,
-      scale,
+      scale / 100.0,
       offsetX,
       offsetY,
       preprocessSilhouette,

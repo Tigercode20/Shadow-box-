@@ -32,6 +32,13 @@ This document records the mistakes made, user complaints, and implementation rul
   - Optical settings: Light Z = `130`, Front opening Z = `80`, Target Width = `1140`, Target Height = `1500`.
   - Shift Y = `100.0`. Scale = `100%`.
 
+### 5. Squashed Projection Mappings (Gradients on Export)
+- **Complaint**: *"شوف الخرج بتاعك بين الاول و دا... انتا المنطق بتاعك بايظ"* (Look at your outputs... your logic is broken - panels showing vertical gradients instead of Gojo details).
+- **Resolution**:
+  - The scale slider state uses percentage units (e.g. `100` for 100%), whereas the projection math expects a fractional value (e.g. `1.0`).
+  - In `handleExportZip`, the percentage `scale` was passed directly instead of being divided by `100.0`, mapping the entire wall projection coordinates to a sub-pixel fraction of the target Gojo drawing. This mapped the entire projection to a single boundary pixel transition, resulting in wide gradients.
+  - Divided `scale` by `100.0` before passing to `exportZipArchive` to match the exact mathematical fractional scale.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

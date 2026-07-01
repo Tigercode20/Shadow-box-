@@ -211,8 +211,14 @@ export function projectWallPanel(
       let Y_w = Y_wall * t;
 
       if (cut_light_path) {
-        if (Math.abs(X_w) > box_w / 2.0 || Math.abs(Y_w) > box_h / 2.0) {
-          continue;
+        if (wall_name === 'left' || wall_name === 'right') {
+          if (Math.abs(Y_w) > box_h / 2.0) {
+            continue;
+          }
+        } else if (wall_name === 'top' || wall_name === 'bottom') {
+          if (Math.abs(X_w) > box_w / 2.0) {
+            continue;
+          }
         }
       }
 

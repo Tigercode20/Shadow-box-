@@ -7,6 +7,23 @@ export interface PanelResult {
   height: number;
 }
 
+export function cvFlip(panel: PanelResult, flipCode: number): PanelResult {
+  let w = panel.width;
+  let h = panel.height;
+  let src = panel.data;
+  let dst = new Uint8Array(w * h);
+  for (let r = 0; r < h; r++) {
+    for (let c = 0; c < w; c++) {
+      let src_r = r;
+      let src_c = c;
+      if (flipCode === 0) src_r = h - 1 - r;
+      else if (flipCode === 1) src_c = w - 1 - c;
+      dst[r * w + c] = src[src_r * w + src_c];
+    }
+  }
+  return { data: dst, width: w, height: h };
+}
+
 export function preprocessSilhouette(
   srcMat: any,
   target_w_mm: number,
@@ -296,22 +313,7 @@ export function assembleCrossFoldLayout(
     ctx!.putImageData(imgData, dx, dy);
   }
   
-  function cvFlip(panel: PanelResult, flipCode: number): PanelResult {
-    let w = panel.width;
-    let h = panel.height;
-    let src = panel.data;
-    let dst = new Uint8Array(w * h);
-    for (let r = 0; r < h; r++) {
-      for (let c = 0; c < w; c++) {
-        let src_r = r;
-        let src_c = c;
-        if (flipCode === 0) src_r = h - 1 - r;
-        else if (flipCode === 1) src_c = w - 1 - c;
-        dst[r * w + c] = src[src_r * w + src_c];
-      }
-    }
-    return { data: dst, width: w, height: h };
-  }
+  
   
   drawPanel(top, base_x_start, 0);
   drawPanel(bottom, base_x_start, base_y_end, 0); 

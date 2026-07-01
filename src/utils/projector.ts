@@ -184,6 +184,9 @@ export function projectWallPanel(
       if (Z_wall >= Z_light) continue;
       
       let denom = Z_light - Z_wall;
+      if (Math.abs(denom) < 0.001) {
+        denom = denom >= 0 ? 0.001 : -0.001;
+      }
       let t = (Z_light - _Z_start) / denom;
       
       let X_w = X_wall * t;
@@ -378,7 +381,7 @@ export function drawContoursToCanvas(canvas: HTMLCanvasElement, contours: any, h
   
   ctx.fillStyle = "#000000";
   for (let i = 0; i < contours.size(); i++) {
-    let parent = hierarchy.intPtr(0, i)[3];
+    let parent = hierarchy.data32S[i * 4 + 3];
     if (parent === -1) {
       drawSingleContour(ctx, contours.get(i));
       ctx.fill();
@@ -387,7 +390,7 @@ export function drawContoursToCanvas(canvas: HTMLCanvasElement, contours: any, h
   
   ctx.fillStyle = "#ffffff";
   for (let i = 0; i < contours.size(); i++) {
-    let parent = hierarchy.intPtr(0, i)[3];
+    let parent = hierarchy.data32S[i * 4 + 3];
     if (parent !== -1) {
       drawSingleContour(ctx, contours.get(i));
       ctx.fill();

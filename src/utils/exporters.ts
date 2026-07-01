@@ -92,8 +92,7 @@ export function downloadCanvasAsSVG(canvas: HTMLCanvasElement, filename: string)
   
   for (let i = 0; i < contours.size(); i++) {
     let contour = contours.get(i);
-    let h = hierarchy.intPtr(0, i);
-    let parent = h[3];
+    let parent = hierarchy.data32S[i * 4 + 3];
     
     if (contour.rows > 0) {
       let pathData = "";
@@ -190,8 +189,7 @@ export function exportZipArchive(
     
     for (let i = 0; i < contours.size(); i++) {
       let contour = contours.get(i);
-      let h = hierarchy.intPtr(0, i);
-      let parent = h[3];
+      let parent = hierarchy.data32S[i * 4 + 3];
       
       if (contour.rows > 0) {
         let pathData = "";

@@ -154,7 +154,8 @@ export function projectWallPanel(
   panel_bg: number,
   scale_factor: number,
   offset_x: number,
-  offset_y: number
+  offset_y: number,
+  cut_light_path?: boolean
 ): PanelResult {
   let W_res = Math.round(box_w * pixels_per_mm);
   let H_res = Math.round(box_h * pixels_per_mm);
@@ -208,6 +209,12 @@ export function projectWallPanel(
 
       let X_w = X_wall * t;
       let Y_w = Y_wall * t;
+
+      if (cut_light_path) {
+        if (Math.abs(X_w) > box_w / 2.0 || Math.abs(Y_w) > box_h / 2.0) {
+          continue;
+        }
+      }
 
       let X_w_trans = (X_w - offset_x) / scale_factor;
       let Y_w_trans = (Y_w - offset_y) / scale_factor;

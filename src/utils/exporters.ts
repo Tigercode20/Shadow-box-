@@ -143,7 +143,8 @@ export function exportZipArchive(
   offset_y: number,
   preprocessSilhouetteFn: any,
   formats: { svg: boolean; pdf: boolean; png: boolean; jpg: boolean; stl: boolean },
-  thickness_mm: number
+  thickness_mm: number,
+  cut_light_path?: boolean
 ) {
   const cv = getCV();
   if (!cv) return;
@@ -317,13 +318,13 @@ export function exportZipArchive(
   let hiResTargetImgData = hiResTargetCanvas.getContext('2d')!.getImageData(0, 0, hiResTargetCanvas.width, hiResTargetCanvas.height);
   
   let hiResWallLeft = projectWallPanel('left', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                       front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+                                       front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y, cut_light_path);
   let hiResWallRight = projectWallPanel('right', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                        front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+                                        front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y, cut_light_path);
   let hiResWallTop = projectWallPanel('top', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                       front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+                                       front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y, cut_light_path);
   let hiResWallBottom = projectWallPanel('bottom', hiResTargetImgData, target_w, target_h, box_w, box_h, box_d, 
-                                          front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y);
+                                          front_z, front_z + box_d, light_z, exportRes, panel_bg, img_scale, offset_x, offset_y, cut_light_path);
                                           
   let hiResCrossCanvas = assembleCrossFoldLayout(hiResWallLeft, hiResWallRight, hiResWallTop, hiResWallBottom, 
                                                  box_w, box_h, box_d, exportRes, panel_bg, draw_slits);

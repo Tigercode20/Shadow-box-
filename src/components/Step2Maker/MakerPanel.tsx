@@ -94,6 +94,12 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     const cv = getCV();
     if (!cv) return;
 
+    // Validate inputs to prevent NaN/0 crashes during typing
+    if (!boxW || !boxH || !boxD || !resolution || !thickness ||
+        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness)) {
+      return;
+    }
+
     const src = cv.imread(rawSilhouetteCanvas);
     const srcGray = new cv.Mat();
     cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
@@ -230,6 +236,12 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     const cv = getCV();
     if (!cv) return;
 
+    // Validate inputs
+    if (!boxW || !boxH || !boxD || !resolution || !thickness ||
+        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness)) {
+      return;
+    }
+
     const src = cv.imread(rawSilhouetteCanvas);
     const srcGray = new cv.Mat();
     cv.cvtColor(src, srcGray, cv.COLOR_RGBA2GRAY);
@@ -237,25 +249,27 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     const thresh = new cv.Mat();
     cv.threshold(srcGray, thresh, 240, 255, cv.THRESH_BINARY_INV);
 
-    const yIndices: number[] = [];
+    let yMinPx = thresh.rows;
+    let yMaxPx = 0;
+    let found = false;
+
     for (let r = 0; r < thresh.rows; r++) {
       for (let c = 0; c < thresh.cols; c++) {
         if (thresh.ucharAt(r, c) > 0) {
-          yIndices.push(r);
+          if (r < yMinPx) yMinPx = r;
+          if (r > yMaxPx) yMaxPx = r;
+          found = true;
         }
       }
     }
 
-    if (yIndices.length === 0) {
+    if (!found) {
       alert("Could not detect any silhouette inside the image!");
       src.delete();
       srcGray.delete();
       thresh.delete();
       return;
     }
-
-    const yMinPx = Math.min(...yIndices);
-    const yMaxPx = Math.max(...yIndices);
 
     const hImg = thresh.rows;
     const yMin = targetH / 2.0 - (yMaxPx / (hImg - 1)) * targetH;

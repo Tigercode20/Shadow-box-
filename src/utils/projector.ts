@@ -983,3 +983,174 @@ export function generateFoldedBoxSTL(
 
   return buffer;
 }
+
+export function convertGeometriesToOBJ(geometries: { name: string; geometry: THREE.BufferGeometry }[]): string {
+  let objStr = "# Shadow Box Maker OBJ Export\n";
+  let vertexOffset = 1;
+  let normalOffset = 1;
+
+  for (const { name, geometry } of geometries) {
+    objStr += `g ${name}\n`;
+    
+    const pos = geometry.getAttribute('position') as THREE.BufferAttribute;
+    const norm = geometry.getAttribute('normal') as THREE.BufferAttribute;
+    const index = geometry.getIndex();
+
+    // Write vertices
+    for (let i = 0; i < pos.count; i++) {
+      objStr += `v ${pos.getX(i).toFixed(4)} ${pos.getY(i).toFixed(4)} ${pos.getZ(i).toFixed(4)}\n`;
+    }
+
+    // Write normals
+    if (norm) {
+      for (let i = 0; i < norm.count; i++) {
+        objStr += `vn ${norm.getX(i).toFixed(4)} ${norm.getY(i).toFixed(4)} ${norm.getZ(i).toFixed(4)}\n`;
+      }
+    }
+
+    // Write faces
+    if (index) {
+      for (let i = 0; i < index.count; i += 3) {
+        const v1 = index.getX(i) + vertexOffset;
+        const v2 = index.getY(i) + vertexOffset;
+        const v3 = index.getZ(i) + vertexOffset;
+        
+        if (norm) {
+          objStr += `f ${v1}//${v1} ${v2}//${v2} ${v3}//${v3}\n`;
+        } else {
+          objStr += `f ${v1} ${v2} ${v3}\n`;
+        }
+      }
+    } else {
+      // Unindexed geometry
+      for (let i = 0; i < pos.count; i += 3) {
+        const v1 = i + vertexOffset;
+        const v2 = i + 1 + vertexOffset;
+        const v3 = i + 2 + vertexOffset;
+        
+        if (norm) {
+          objStr += `f ${v1}//${v1} ${v2}//${v2} ${v3}//${v3}\n`;
+        } else {
+          objStr += `f ${v1} ${v2} ${v3}\n`;
+        }
+      }
+    }
+
+    vertexOffset += pos.count;
+    normalOffset += norm ? norm.count : 0;
+  }
+
+  return objStr;
+}
+
+export function generateFoldedBoxOBJ(
+  left: PanelResult,
+  right: PanelResult,
+  top: PanelResult,
+  bottom: PanelResult,
+  boxW: number,
+  boxH: number,
+  boxD: number,
+  lightZ: number,
+  frontZ: number,
+  resolution: number,
+  thickness: number,
+  panelType: number
+): string {
+  const W_res = Math.round(boxW * resolution);
+  const H_res = Math.round(boxH * resolution);
+  const frontData = new Uint8Array(W_res * H_res);
+  frontData.fill(panelType);
+  
+  const cx = Math.floor(W_res / 2);
+  const cy = Math.floor(H_res / 2);
+  const r_px = Math.round(5 * resolution);
+  for (let r = 0; r < H_res; r++) {
+    for (let c = 0; c < W_res; c++) {
+      const dx = c - cx;
+      const dy = r - cy;
+      if (dx * dx + dy * dy <= r_px * r_px) {
+        frontData[r * W_res + c] = 0;
+      }
+    }
+  }
+
+  const leftGeo = extrudePanelToGeometry(left.data, left.width, left.height, thickness, resolution, 'left', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const rightGeo = extrudePanelToGeometry(right.data, right.width, right.height, thickness, resolution, 'right', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const topGeo = extrudePanelToGeometry(top.data, top.width, top.height, thickness, resolution, 'top', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const bottomGeo = extrudePanelToGeometry(bottom.data, bottom.width, bottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const targetGeo = extrudePanelToGeometry(frontData, W_res, H_res, thickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
+
+  // Left Wall
+  const posLeft = leftGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posLeft.count; i++) {
+    const x = posLeft.getX(i);
+    const y = posLeft.getY(i);
+    const z = posLeft.getZ(i);
+    posLeft.setXYZ(i, -boxW / 2.0 + z, y, boxD - x);
+  }
+  leftGeo.computeVertexNormals();
+
+  // Right Wall
+  const posRight = rightGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posRight.count; i++) {
+    const x = posRight.getX(i);
+    const y = posRight.getY(i);
+    const z = posRight.getZ(i);
+    posRight.setXYZ(i, boxW / 2.0 - z, y, boxD - x);
+  }
+  rightGeo.computeVertexNormals();
+
+  // Top Wall
+  const posTop = topGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posTop.count; i++) {
+    const x = posTop.getX(i);
+    const y = posTop.getY(i);
+    const z = posTop.getZ(i);
+    posTop.setXYZ(i, x, boxH / 2.0 - z, y);
+  }
+  topGeo.computeVertexNormals();
+
+  // Bottom Wall
+  const posBottom = bottomGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posBottom.count; i++) {
+    const x = posBottom.getX(i);
+    const y = posBottom.getY(i);
+    const z = posBottom.getZ(i);
+    posBottom.setXYZ(i, x, -boxH / 2.0 + z, y);
+  }
+  bottomGeo.computeVertexNormals();
+
+  // Target Base
+  const posTarget = targetGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posTarget.count; i++) {
+    const x = posTarget.getX(i);
+    const y = posTarget.getY(i);
+    const z = posTarget.getZ(i);
+    posTarget.setXYZ(i, x - boxW / 2.0, y - boxH / 2.0, -z);
+  }
+  targetGeo.computeVertexNormals();
+
+  // Rotate 90 degrees around X to lie flat on the floor (XZ plane)
+  leftGeo.rotateX(-Math.PI / 2); leftGeo.computeVertexNormals();
+  rightGeo.rotateX(-Math.PI / 2); rightGeo.computeVertexNormals();
+  topGeo.rotateX(-Math.PI / 2); topGeo.computeVertexNormals();
+  bottomGeo.rotateX(-Math.PI / 2); bottomGeo.computeVertexNormals();
+  targetGeo.rotateX(-Math.PI / 2); targetGeo.computeVertexNormals();
+
+  const objText = convertGeometriesToOBJ([
+    { name: 'Left_Wall', geometry: leftGeo },
+    { name: 'Right_Wall', geometry: rightGeo },
+    { name: 'Top_Wall', geometry: topGeo },
+    { name: 'Bottom_Wall', geometry: bottomGeo },
+    { name: 'Front_Panel', geometry: targetGeo }
+  ]);
+
+  leftGeo.dispose();
+  rightGeo.dispose();
+  topGeo.dispose();
+  bottomGeo.dispose();
+  targetGeo.dispose();
+
+  return objText;
+}

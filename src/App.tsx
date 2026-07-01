@@ -9,6 +9,7 @@ import { isOpenCvLoaded } from './utils/opencv';
 export interface GeneratedStl {
   name: string;
   buffer: ArrayBuffer;
+  objText?: string;
 }
 
 function App() {

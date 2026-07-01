@@ -55,6 +55,14 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generate
     link.click();
   };
 
+  const downloadOBJ = (text: string, name: string) => {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.download = `${name.toLowerCase().replace(/\s+/g, '_')}.obj`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  };
+
   useEffect(() => {
     if (!active || !mountRef.current) return;
 
@@ -249,8 +257,10 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generate
       const size = new THREE.Vector3();
       box.getSize(size);
 
-      // Center geometry
-      geometry.center();
+      // Center X/Z, and align bottom Y to 0 so the model sits on the floor grid helper
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      geometry.translate(-center.x, -box.min.y, -center.z);
 
       const material = new THREE.MeshPhongMaterial({
         color: 0x00f0ff,
@@ -344,21 +354,40 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generate
                   }}
                 >
                   <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{stl.name}</span>
-                  <button 
-                    className="btn btn-secondary" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      downloadSTL(stl.buffer, stl.name);
-                    }}
-                    style={{
-                      padding: '4px 8px',
-                      fontSize: '0.75rem',
-                      borderColor: 'rgba(0, 240, 255, 0.25)',
-                      color: 'var(--primary)'
-                    }}
-                  >
-                    <i className="fa-solid fa-download"></i>
-                  </button>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {stl.objText && (
+                      <button 
+                        className="btn btn-secondary" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadOBJ(stl.objText!, stl.name);
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '0.75rem',
+                          borderColor: 'rgba(0, 240, 255, 0.25)',
+                          color: 'var(--primary)'
+                        }}
+                      >
+                        OBJ
+                      </button>
+                    )}
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadSTL(stl.buffer, stl.name);
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        fontSize: '0.75rem',
+                        borderColor: 'rgba(0, 240, 255, 0.25)',
+                        color: 'var(--primary)'
+                      }}
+                    >
+                      <i className="fa-solid fa-download"></i>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

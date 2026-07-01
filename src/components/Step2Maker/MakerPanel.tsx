@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCV } from '../../utils/opencv';
-import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas, extrudePanelToSTL, generateFoldedBoxSTL } from '../../utils/projector';
+import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas, extrudePanelToSTL, generateFoldedBoxSTL, generateFoldedBoxOBJ } from '../../utils/projector';
 import { downloadCanvasAsImage, downloadCanvasAsPDF, downloadCanvasAsSVG, downloadCanvasAsSTL, exportZipArchive } from '../../utils/exporters';
 import { SliderControl } from '../Common/SliderControl';
 import type { GeneratedStl } from '../../App';
@@ -225,7 +225,23 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
         thickness,
         panelType
       );
-      stlList.push({ name: 'Folded Box', buffer: stlFoldedBox });
+
+      const objFoldedBox = generateFoldedBoxOBJ(
+        leftPanel,
+        rightPanel,
+        topPanel,
+        bottomPanel,
+        boxW,
+        boxH,
+        boxD,
+        lightZ,
+        frontZ,
+        resolution,
+        thickness,
+        panelType
+      );
+
+      stlList.push({ name: 'Folded Box', buffer: stlFoldedBox, objText: objFoldedBox });
     }
 
     if (crossLayoutCanvas) {

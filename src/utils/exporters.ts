@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import { getCV } from './opencv';
-import { drawContoursToCanvas, projectWallPanel, assembleCrossFoldLayout, extrudePanelToSTL, generateFoldedBoxSTL } from './projector';
+import { drawContoursToCanvas, projectWallPanel, assembleCrossFoldLayout, extrudePanelToSTL, generateFoldedBoxSTL, generateFoldedBoxOBJ } from './projector';
 import type { PanelResult } from './projector';
 
 export function downloadCanvasAsSTL(canvas: HTMLCanvasElement, filename: string, thicknessMm: number, pixelsPerMm: number) {
@@ -370,6 +370,22 @@ export function exportZipArchive(
       panel_bg
     );
     zip.file("folded_box.stl", foldedBoxArrayBuffer);
+
+    let foldedBoxOBJString = generateFoldedBoxOBJ(
+      hiResWallLeft,
+      hiResWallRight,
+      hiResWallTop,
+      hiResWallBottom,
+      box_w,
+      box_h,
+      box_d,
+      light_z,
+      front_z,
+      exportRes,
+      thickness_mm,
+      panel_bg
+    );
+    zip.file("folded_box.obj", foldedBoxOBJString);
   }
   
   src.delete(); srcGray.delete(); preprocessedMat.delete(); threshMat.delete(); contours.delete(); hierarchy.delete();

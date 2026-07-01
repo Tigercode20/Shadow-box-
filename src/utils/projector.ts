@@ -702,6 +702,7 @@ export function extrudePanelToSTL(
     posAttr.setY(i, y_mm);
   }
 
+  geometry.rotateX(-Math.PI / 2); // Rotate 90 degrees around X to lie flat on the floor (XZ plane)
   geometry.computeVertexNormals();
 
   // Convert BufferGeometry to Binary STL

@@ -624,7 +624,7 @@ export function extrudePanelToGeometry(
   const geometry = new THREE.ExtrudeGeometry(shapes, extrudeSettings);
   const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
 
-  const isSlanted = !!(wallName && boxW && boxH && boxD && lightZ !== undefined && frontZ !== undefined);
+  const isSlanted = false; // Disable slanted cuts to keep designs clean like the unfold template
 
   // Apply slant and millimeter scaling and origin shift
   for (let i = 0; i < posAttr.count; i++) {
@@ -701,7 +701,7 @@ export function extrudePanelToGeometry(
     let y_mm = y_final / pixelsPerMm;
 
     // 5. Shift origin to the center of the front edge of the panel
-    if (isSlanted) {
+    if (wallName) {
       if (wallName === 'left' || wallName === 'right') {
         y_mm = y_mm - boxH! / 2.0;
       } else if (wallName === 'top' || wallName === 'bottom') {
@@ -919,7 +919,7 @@ export function generateFoldedBoxSTL(
     const x = posLeft.getX(i);
     const y = posLeft.getY(i);
     const z = posLeft.getZ(i);
-    posLeft.setXYZ(i, -boxW / 2.0 + z, y, x);
+    posLeft.setXYZ(i, -boxW / 2.0 + z, y, boxD - x);
   }
   leftGeo.computeVertexNormals();
 

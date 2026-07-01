@@ -43,7 +43,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
   const [useCustomShape, setUseCustomShape] = useState<boolean>(true);
   const [groundBottom, setGroundBottom] = useState<boolean>(false);
   const [drawSlits, setDrawSlits] = useState<boolean>(false);
-  const [cutLightPath, setCutLightPath] = useState<boolean>(true);
+
 
   const [crossCanvas, setCrossCanvas] = useState<HTMLCanvasElement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -64,7 +64,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
   useEffect(() => {
     if (!rawSilhouetteCanvas) return;
     updateProjections();
-  }, [rawSilhouetteCanvas, active, scale, offsetX, offsetY, boxW, boxH, boxD, lightZ, frontZ, targetW, targetH, resolution, panelType, useEdges, thresh1, thresh2, useCustomShape, groundBottom, drawSlits, cutLightPath]);
+  }, [rawSilhouetteCanvas, active, scale, offsetX, offsetY, boxW, boxH, boxD, lightZ, frontZ, targetW, targetH, resolution, panelType, useEdges, thresh1, thresh2, useCustomShape, groundBottom, drawSlits]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -148,13 +148,13 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
     // Calculate panels
     const leftPanel = projectWallPanel('left', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
     const rightPanel = projectWallPanel('right', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
     const topPanel = projectWallPanel('top', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
     const bottomPanel = projectWallPanel('bottom', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
 
 
 
@@ -425,13 +425,13 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     const imgScaleFract = scale / 100.0;
 
     const leftPanel = projectWallPanel('left', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
     const rightPanel = projectWallPanel('right', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
     const topPanel = projectWallPanel('top', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
     const bottomPanel = projectWallPanel('bottom', targetImgData, targetW, targetH, boxW, boxH, boxD,
-      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY, cutLightPath);
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
 
     const hiResCrossCanvas = assembleCrossFoldLayout(leftPanel, rightPanel, topPanel, bottomPanel, boxW, boxH, boxD, exportRes, panelType, drawSlits);
 
@@ -505,8 +505,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
       offsetY,
       preprocessSilhouette,
       selectedFormats,
-      thickness,
-      cutLightPath
+      thickness
     );
   };
 
@@ -759,17 +758,6 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                   onChange={(e) => setDrawSlits(e.target.checked)}
                 />
                 <span>Add Alignment Slits (Mortise)</span>
-              </label>
-            </div>
-
-            <div className="input-group">
-              <label className="checkbox-group">
-                <input
-                  type="checkbox"
-                  checked={cutLightPath}
-                  onChange={(e) => setCutLightPath(e.target.checked)}
-                />
-                <span>Cut Light Beam Path</span>
               </label>
             </div>
           </div>

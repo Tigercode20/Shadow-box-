@@ -682,7 +682,7 @@ export function extrudePanelToGeometry(
         const Z_in = lightZ! + t_val * (Z_wall - lightZ!);
         const Y_in = t_val * Y_wall;
 
-        x_final = (Z_in - frontZ!) * pixelsPerMm;
+        x_final = ((frontZ! + boxD!) - Z_in) * pixelsPerMm;
         y_final = (Y_in + boxH! / 2.0) * pixelsPerMm;
       } else {
         const X_wall = (-boxW! / 2.0) + (cg / width) * boxW!;

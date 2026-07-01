@@ -371,7 +371,7 @@ export function exportZipArchive(
     );
     zip.file("folded_box.stl", foldedBoxArrayBuffer);
 
-    let foldedBoxOBJString = generateFoldedBoxOBJ(
+    let foldedBoxOBJFiles = generateFoldedBoxOBJ(
       hiResWallLeft,
       hiResWallRight,
       hiResWallTop,
@@ -385,7 +385,9 @@ export function exportZipArchive(
       thickness_mm,
       panel_bg
     );
-    zip.file("folded_box.obj", foldedBoxOBJString);
+    for (const file of foldedBoxOBJFiles) {
+      zip.file(file.name, file.text);
+    }
   }
   
   src.delete(); srcGray.delete(); preprocessedMat.delete(); threshMat.delete(); contours.delete(); hierarchy.delete();

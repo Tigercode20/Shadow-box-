@@ -241,7 +241,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
         panelType
       );
 
-      stlList.push({ name: 'Folded Box', buffer: stlFoldedBox, objText: objFoldedBox });
+      stlList.push({ name: 'Folded Box', buffer: stlFoldedBox, objFiles: objFoldedBox });
     }
 
     if (crossLayoutCanvas) {

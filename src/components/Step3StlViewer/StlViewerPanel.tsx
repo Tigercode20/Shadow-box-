@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { parseSTL } from '../../utils/stlParser';
 import type { GeneratedStl } from '../../App';
+import JSZip from 'jszip';
 
 interface StlViewerPanelProps {
   active: boolean;
@@ -55,12 +56,17 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generate
     link.click();
   };
 
-  const downloadOBJ = (text: string, name: string) => {
-    const blob = new Blob([text], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.download = `${name.toLowerCase().replace(/\s+/g, '_')}.obj`;
-    link.href = URL.createObjectURL(blob);
-    link.click();
+  const downloadOBJZip = (objFiles: { name: string; text: string }[], name: string) => {
+    const zip = new JSZip();
+    for (const file of objFiles) {
+      zip.file(file.name, file.text);
+    }
+    zip.generateAsync({ type: 'blob' }).then((content) => {
+      const link = document.createElement('a');
+      link.download = `${name.toLowerCase().replace(/\s+/g, '_')}_obj_files.zip`;
+      link.href = URL.createObjectURL(content);
+      link.click();
+    });
   };
 
   useEffect(() => {
@@ -355,12 +361,12 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generate
                 >
                   <span style={{ fontWeight: 600, color: 'var(--text-main)' }}>{stl.name}</span>
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    {stl.objText && (
+                    {stl.objFiles && (
                       <button 
                         className="btn btn-secondary" 
                         onClick={(e) => {
                           e.stopPropagation();
-                          downloadOBJ(stl.objText!, stl.name);
+                          downloadOBJZip(stl.objFiles!, stl.name);
                         }}
                         style={{
                           padding: '4px 8px',

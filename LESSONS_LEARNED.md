@@ -106,6 +106,12 @@ This document records the mistakes made, user complaints, and implementation rul
   - In Cutout mode, OpenCV's contour list is not sorted by parent-child hierarchy. A single-pass loop resulted in trying to add Level 2 holes to parent Level 1 shapes before the parent shape was registered in the `shapeMap`.
   - Implemented a strict two-pass parser: Pass 1 loops through the contours to construct and map all Level 1 parent shapes. Pass 2 loops to extract and successfully link Level 2 holes (`parentShape.holes.push(new THREE.Path(points))`) to their registered parents. This preserves all fine details and holes inside solid regions.
 
+### 16. Increased Border Tolerance for Unslanted Boundaries
+- **Complaint**: Left and Right walls in Cutout mode had slanted/warped top and bottom edges instead of perfectly straight, unslanted perpendicular boundaries.
+- **Resolution**:
+  - Because contours are approximated in pixel space, vertex coordinates along the panel boundaries can be slightly offset (e.g. 0.5-0.8 mm away from the border). A small border detection tolerance of `0.5 mm` failed to match these vertices, resulting in unwanted slanting at the outer margins.
+  - Increased the `eps` boundary detection tolerance to `1.2 mm` in `extrudePanelToSTL`. This reliably catches all boundary-adjacent vertices and locks them to a flat 90-degree slant factor (`t = 1.0`), ensuring all sides that contact the box frame remain straight and mountable.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

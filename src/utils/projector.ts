@@ -639,8 +639,8 @@ export function extrudePanelToSTL(
       }
     }
 
-    // 2. Check if the vertex lies on the outer boundary of the panel in millimeters (using 0.5 mm tolerance)
-    const eps = 0.5;
+    // 2. Check if the vertex lies on the outer boundary of the panel in millimeters (using 1.2 mm tolerance)
+    const eps = 1.2;
     let isOnBorder = false;
     if (isSlanted) {
       if (wallName === 'left' || wallName === 'right') {

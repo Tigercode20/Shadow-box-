@@ -991,7 +991,7 @@ export function convertGeometriesToOBJ(geometries: { name: string; geometry: THR
   let normalOffset = 1;
 
   for (const { name, geometry } of geometries) {
-    objStr += `g ${name}\n`;
+    objStr += `o ${name}\n`;
     
     const pos = geometry.getAttribute('position') as THREE.BufferAttribute;
     const norm = geometry.getAttribute('normal') as THREE.BufferAttribute;
@@ -1057,7 +1057,7 @@ export function generateFoldedBoxOBJ(
   resolution: number,
   thickness: number,
   panelType: number
-): { name: string; text: string }[] {
+): string {
   const W_res = Math.round(boxW * resolution);
   const H_res = Math.round(boxH * resolution);
   const frontData = new Uint8Array(W_res * H_res);
@@ -1082,34 +1082,72 @@ export function generateFoldedBoxOBJ(
   const bottomGeo = extrudePanelToGeometry(bottom.data, bottom.width, bottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const targetGeo = extrudePanelToGeometry(frontData, W_res, H_res, thickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
 
-  // Apply geometry-level flips to Right and Bottom walls to match their expected individual orientations
+  // Left Wall
+  const posLeft = leftGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posLeft.count; i++) {
+    const x = posLeft.getX(i);
+    const y = posLeft.getY(i);
+    const z = posLeft.getZ(i);
+    posLeft.setXYZ(i, -boxW / 2.0 + z, y, boxD - x);
+  }
+  leftGeo.computeVertexNormals();
+
+  // Right Wall
   const posRight = rightGeo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < posRight.count; i++) {
-    posRight.setX(i, boxD - posRight.getX(i));
+    const x = posRight.getX(i);
+    const y = posRight.getY(i);
+    const z = posRight.getZ(i);
+    posRight.setXYZ(i, boxW / 2.0 - z, y, boxD - x);
   }
   rightGeo.computeVertexNormals();
 
+  // Top Wall
+  const posTop = topGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posTop.count; i++) {
+    const x = posTop.getX(i);
+    const y = posTop.getY(i);
+    const z = posTop.getZ(i);
+    posTop.setXYZ(i, x, boxH / 2.0 - z, y);
+  }
+  topGeo.computeVertexNormals();
+
+  // Bottom Wall
   const posBottom = bottomGeo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < posBottom.count; i++) {
-    posBottom.setX(i, -posBottom.getX(i));
+    const x = posBottom.getX(i);
+    const y = posBottom.getY(i);
+    const z = posBottom.getZ(i);
+    posBottom.setXYZ(i, x, -boxH / 2.0 + z, y);
   }
   bottomGeo.computeVertexNormals();
 
-  // Rotate all 5 geometries by -90 degrees around X to lie flat in the XZ plane on the floor grid (Y=0 as bottom)
+  // Target Base
+  const targetOffset = panelType === 255 ? ((lightZ - frontZ) - thickness) : 0;
+  const posTarget = targetGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posTarget.count; i++) {
+    const x = posTarget.getX(i);
+    const y = posTarget.getY(i);
+    const z = posTarget.getZ(i);
+    posTarget.setXYZ(i, x - boxW / 2.0, y - boxH / 2.0, z + targetOffset);
+  }
+  targetGeo.computeVertexNormals();
+
+  // Rotate 90 degrees around X to lie flat on the floor (XZ plane)
   leftGeo.rotateX(-Math.PI / 2); leftGeo.computeVertexNormals();
   rightGeo.rotateX(-Math.PI / 2); rightGeo.computeVertexNormals();
   topGeo.rotateX(-Math.PI / 2); topGeo.computeVertexNormals();
   bottomGeo.rotateX(-Math.PI / 2); bottomGeo.computeVertexNormals();
   targetGeo.rotateX(-Math.PI / 2); targetGeo.computeVertexNormals();
 
-  // Generate OBJ string for each of the 5 flat geometries individually
-  const leftOBJ = convertGeometriesToOBJ([{ name: 'Left_Wall', geometry: leftGeo }]);
-  const rightOBJ = convertGeometriesToOBJ([{ name: 'Right_Wall', geometry: rightGeo }]);
-  const topOBJ = convertGeometriesToOBJ([{ name: 'Top_Wall', geometry: topGeo }]);
-  const bottomOBJ = convertGeometriesToOBJ([{ name: 'Bottom_Wall', geometry: bottomGeo }]);
-  
   const targetName = panelType === 255 ? 'Center_Cylinder' : 'Front_Panel';
-  const targetOBJ = convertGeometriesToOBJ([{ name: targetName, geometry: targetGeo }]);
+  const objText = convertGeometriesToOBJ([
+    { name: 'Left_Wall', geometry: leftGeo },
+    { name: 'Right_Wall', geometry: rightGeo },
+    { name: 'Top_Wall', geometry: topGeo },
+    { name: 'Bottom_Wall', geometry: bottomGeo },
+    { name: targetName, geometry: targetGeo }
+  ]);
 
   leftGeo.dispose();
   rightGeo.dispose();
@@ -1117,11 +1155,5 @@ export function generateFoldedBoxOBJ(
   bottomGeo.dispose();
   targetGeo.dispose();
 
-  return [
-    { name: 'left_wall.obj', text: leftOBJ },
-    { name: 'right_wall.obj', text: rightOBJ },
-    { name: 'top_wall.obj', text: topOBJ },
-    { name: 'bottom_wall.obj', text: bottomOBJ },
-    { name: `${targetName.toLowerCase()}.obj`, text: targetOBJ }
-  ];
+  return objText;
 }

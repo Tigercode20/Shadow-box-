@@ -950,7 +950,7 @@ export function generateFoldedBoxSTL(
     const x = posBottom.getX(i);
     const y = posBottom.getY(i);
     const z = posBottom.getZ(i);
-    posBottom.setXYZ(i, x, -boxH / 2.0 + z, boxD - y);
+    posBottom.setXYZ(i, -x, -boxH / 2.0 + z, boxD - y);
   }
   bottomGeo.computeVertexNormals();
 

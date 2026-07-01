@@ -112,6 +112,38 @@ This document records the mistakes made, user complaints, and implementation rul
   - Because contours are approximated in pixel space, vertex coordinates along the panel boundaries can be slightly offset (e.g. 0.5-0.8 mm away from the border). A small border detection tolerance of `0.5 mm` failed to match these vertices, resulting in unwanted slanting at the outer margins.
   - Increased the `eps` boundary detection tolerance to `1.2 mm` in `extrudePanelToSTL`. This reliably catches all boundary-adjacent vertices and locks them to a flat 90-degree slant factor (`t = 1.0`), ensuring all sides that contact the box frame remain straight and mountable.
 
+### 17. Correcting Projection Math to Level 1 Silhouette Target Plane
+- **Complaint**: The light projection on the side walls did not align with the front silhouette central point.
+- **Resolution**:
+  - The previous projection formula assumed the silhouette intersected at $Z=0$.
+  - Corrected the projection factor `t` to target the actual front opening plane `_Z_start` (i.e. `t = (Z_light - _Z_start) / denom`), which aligns the ray projection angle perfectly with the central point.
+
+### 18. Preventing Call Stack Size Exceeded RangeErrors
+- **Complaint**: React page crashes with `RangeError: Maximum call stack size exceeded` in `autoFitSilhouette`.
+- **Resolution**:
+  - Replaced the spread operator (`...yIndices`) in `Math.min`/`Math.max` calls on large arrays with a single linear `for` loop to find the boundaries.
+
+### 19. Adding Input Validation to Prevent Canvas Size IndexSizeErrors
+- **Complaint**: Clearing input fields causes `Failed to execute 'createImageData'` canvas size crashes.
+- **Resolution**:
+  - Added comprehensive state parameter checks at the beginning of `updateProjections` and `autoFitSilhouette` to exit early if any parameter is `NaN`, `0`, or `undefined`.
+
+### 20. Direct Memory Copying for OpenCV Mat Creation
+- **Complaint**: Converting large templates causes `Uncaught RangeError: Invalid array length` in `Array.from`.
+- **Resolution**:
+  - Avoided `Array.from` which clones typed arrays and exhausts JavaScript memory limits.
+  - Initialized OpenCV `cv.Mat` directly and used high-performance direct buffer assignment: `mat.data.set(panelData)`.
+
+### 21. Blender/SolidWorks Style Axis Gizmo Viewer Overlay
+- **Complaint**: User wanted a SolidWorks/Blender style 3D XYZ axis helper in the bottom-right corner.
+- **Resolution**:
+  - Created a corner viewport overlay rendering of a synchronized `THREE.AxesHelper` and text sprites inside the animation frame loop.
+
+### 22. Rotating STL Geometries 90 Degrees around X-Axis to Lie Flat
+- **Complaint**: User wanted the 3D models to be rotated around the X axis by 90 degrees.
+- **Resolution**:
+  - Added `geometry.rotateX(-Math.PI / 2)` after extrusion and vertex calculations in `extrudePanelToSTL`. This rotates the model flat onto the floor (XZ plane) with its thickness pointing upwards (Y direction) for optimal viewing and 3D printing.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

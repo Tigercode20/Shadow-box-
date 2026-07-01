@@ -86,6 +86,13 @@ This document records the mistakes made, user complaints, and implementation rul
   - OpenCV.js does not expose a `setUCharAt` writing function for Mat elements.
   - Replaced all writing loops with direct data buffer index assignments: `mat.data[r * width + c] = value` (which is standard and extremely fast in JS).
 
+### 13. Three.js Shape Winding Order and Nested Islands Triangulation (Earcut Fix)
+- **Complaint**: STL models generated as completely solid green sheets with no holes, or lost inner detail components.
+- **Resolution**:
+  - Three.js Shape Earcut triangulation requires opposite winding orders to cut out holes (outer shape must be Counter-Clockwise [CCW], and hole paths must be Clockwise [CW]). Because OpenCV contours can have arbitrary winding orders, Earcut failed and filled the holes completely, making the wall solid.
+  - Implemented automated winding order enforcement: forced all Level 1 holes to Clockwise (`forceClockwise`), and Level 2 solid islands to Counter-Clockwise (`forceCounterClockwise`).
+  - Organized the contours by hierarchy: Level 1 contours are added as holes inside the main CCW rectangle; Level 2 contours (solid islands inside Level 1 holes, e.g. Gojo's eye pupils and skin details) are extruded as separate solid shapes inside the holes; and Level 3 contours (holes inside Level 2 islands) are added as holes to the Level 2 shapes. This guarantees perfect watertight CSG rendering in 3D without any triangulation failures.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

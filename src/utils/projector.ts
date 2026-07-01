@@ -454,7 +454,9 @@ export function extrudePanelToSTL(
   const hierarchy = new cv.Mat();
   cv.findContours(threshMat, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
 
-  // Create the main rectangular outer shape in pixel space
+  const shapes: THREE.Shape[] = [];
+
+  // Create the main rectangular outer shape in pixel space (oriented CCW)
   const outerPoints = [
     new THREE.Vector2(0, 0),
     new THREE.Vector2(width, 0),
@@ -462,14 +464,44 @@ export function extrudePanelToSTL(
     new THREE.Vector2(0, height)
   ];
   const mainShape = new THREE.Shape(outerPoints);
+  shapes.push(mainShape);
 
-  // Add all contours as holes inside the main rectangle shape
+  // Map to store Level 2 shapes (solid islands inside Level 1 holes)
+  const holeToIslandMap = new Map<number, THREE.Shape>();
+
+  // Winding order helpers
+  const forceClockwise = (pts: THREE.Vector2[]) => {
+    let sum = 0;
+    for (let j = 0; j < pts.length; j++) {
+      const p1 = pts[j];
+      const p2 = pts[(j + 1) % pts.length];
+      sum += (p2.x - p1.x) * (p2.y + p1.y);
+    }
+    if (sum < 0) pts.reverse();
+    return pts;
+  };
+
+  const forceCounterClockwise = (pts: THREE.Vector2[]) => {
+    let sum = 0;
+    for (let j = 0; j < pts.length; j++) {
+      const p1 = pts[j];
+      const p2 = pts[(j + 1) % pts.length];
+      sum += (p2.x - p1.x) * (p2.y + p1.y);
+    }
+    if (sum > 0) pts.reverse();
+    return pts;
+  };
+
+  // 1. First pass: build Level 1 holes (CW) and Level 2 islands (CCW)
   for (let i = 0; i < contours.size(); i++) {
     const contour = contours.get(i);
     if (contour.rows < 3) continue;
 
     const area = cv.contourArea(contour);
-    if (area < 2) continue; // Skip tiny single-pixel artifacts
+    if (area < 2) continue; // Skip tiny single-pixel noise
+
+    const h = hierarchy.intPtr(0, i);
+    const parentIdx = h[3];
 
     const points: THREE.Vector2[] = [];
     for (let j = 0; j < contour.rows; j++) {
@@ -477,7 +509,44 @@ export function extrudePanelToSTL(
       const r_val = contour.data32S[j * 2 + 1];
       points.push(new THREE.Vector2(c_val, height - r_val));
     }
-    mainShape.holes.push(new THREE.Path(points));
+
+    if (parentIdx === -1) {
+      // Level 1: Cutout Hole (empty space) -> Must be Clockwise
+      forceClockwise(points);
+      mainShape.holes.push(new THREE.Path(points));
+    } else {
+      // Level 2: Solid Island inside Level 1 Hole -> Must be Counter-Clockwise
+      forceCounterClockwise(points);
+      const islandShape = new THREE.Shape(points);
+      shapes.push(islandShape);
+      holeToIslandMap.set(i, islandShape);
+    }
+  }
+
+  // 2. Second pass: link Level 3 holes (CW) inside Level 2 islands
+  for (let i = 0; i < contours.size(); i++) {
+    const h = hierarchy.intPtr(0, i);
+    const parentIdx = h[3];
+    if (parentIdx !== -1) {
+      const grandParentIdx = hierarchy.intPtr(0, parentIdx)[3];
+      if (grandParentIdx !== -1) {
+        // Level 3 hole inside Level 2 island
+        const parentIsland = holeToIslandMap.get(parentIdx);
+        if (parentIsland) {
+          const contour = contours.get(i);
+          if (contour.rows >= 3) {
+            const points: THREE.Vector2[] = [];
+            for (let j = 0; j < contour.rows; j++) {
+              const c_val = contour.data32S[j * 2];
+              const r_val = contour.data32S[j * 2 + 1];
+              points.push(new THREE.Vector2(c_val, height - r_val));
+            }
+            forceClockwise(points);
+            parentIsland.holes.push(new THREE.Path(points));
+          }
+        }
+      }
+    }
   }
 
   // Cleanup OpenCV
@@ -492,7 +561,7 @@ export function extrudePanelToSTL(
     bevelEnabled: false
   };
 
-  const geometry = new THREE.ExtrudeGeometry([mainShape], extrudeSettings);
+  const geometry = new THREE.ExtrudeGeometry(shapes, extrudeSettings);
   const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
 
   const isSlanted = !!(wallName && boxW && boxH && boxD && lightZ !== undefined && frontZ !== undefined);

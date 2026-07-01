@@ -905,11 +905,12 @@ export function generateFoldedBoxSTL(
   }
 
   // 1. Generate the 5 geometries in flat space using raw unflipped panel data
+  const baseThickness = panelType === 255 ? (lightZ - frontZ) : thickness;
   const leftGeo = extrudePanelToGeometry(left.data, left.width, left.height, thickness, resolution, 'left', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const rightGeo = extrudePanelToGeometry(right.data, right.width, right.height, thickness, resolution, 'right', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const topGeo = extrudePanelToGeometry(top.data, top.width, top.height, thickness, resolution, 'top', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const bottomGeo = extrudePanelToGeometry(bottom.data, bottom.width, bottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
-  const targetGeo = extrudePanelToGeometry(frontData, W_res, H_res, thickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
+  const targetGeo = extrudePanelToGeometry(frontData, W_res, H_res, baseThickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
 
   // 2. Transform each geometry to its 3D folded position in the box
   
@@ -953,13 +954,13 @@ export function generateFoldedBoxSTL(
   }
   bottomGeo.computeVertexNormals();
 
-  // Target base (front panel) centered around (0,0) and stays flat at Z = -z (extrude outwards)
+  // Target base (front panel) centered around (0,0) and stays flat at Z = z (extrude inwards)
   const posTarget = targetGeo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < posTarget.count; i++) {
     const x = posTarget.getX(i);
     const y = posTarget.getY(i);
     const z = posTarget.getZ(i);
-    posTarget.setXYZ(i, x - boxW / 2.0, y - boxH / 2.0, -z);
+    posTarget.setXYZ(i, x - boxW / 2.0, y - boxH / 2.0, z);
   }
   targetGeo.computeVertexNormals();
 
@@ -1075,11 +1076,12 @@ export function generateFoldedBoxOBJ(
     }
   }
 
+  const baseThickness = panelType === 255 ? (lightZ - frontZ) : thickness;
   const leftGeo = extrudePanelToGeometry(left.data, left.width, left.height, thickness, resolution, 'left', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const rightGeo = extrudePanelToGeometry(right.data, right.width, right.height, thickness, resolution, 'right', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const topGeo = extrudePanelToGeometry(top.data, top.width, top.height, thickness, resolution, 'top', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const bottomGeo = extrudePanelToGeometry(bottom.data, bottom.width, bottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
-  const targetGeo = extrudePanelToGeometry(frontData, W_res, H_res, thickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
+  const targetGeo = extrudePanelToGeometry(frontData, W_res, H_res, baseThickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
 
   // Left Wall
   const posLeft = leftGeo.getAttribute('position') as THREE.BufferAttribute;
@@ -1127,7 +1129,7 @@ export function generateFoldedBoxOBJ(
     const x = posTarget.getX(i);
     const y = posTarget.getY(i);
     const z = posTarget.getZ(i);
-    posTarget.setXYZ(i, x - boxW / 2.0, y - boxH / 2.0, -z);
+    posTarget.setXYZ(i, x - boxW / 2.0, y - boxH / 2.0, z);
   }
   targetGeo.computeVertexNormals();
 

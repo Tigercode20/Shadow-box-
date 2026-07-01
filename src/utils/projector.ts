@@ -800,10 +800,11 @@ export function extrudePanelToSTL(
     for (let i = 0; i < pos.count; i++) {
       pos.setX(i, boxD - pos.getX(i));
     }
-  } else if (wallName === 'bottom') {
+  } else if (wallName === 'bottom' && boxD !== undefined) {
     const pos = geometry.getAttribute('position') as THREE.BufferAttribute;
     for (let i = 0; i < pos.count; i++) {
       pos.setX(i, -pos.getX(i));
+      pos.setY(i, boxD - pos.getY(i));
     }
   }
 
@@ -949,7 +950,7 @@ export function generateFoldedBoxSTL(
     const x = posBottom.getX(i);
     const y = posBottom.getY(i);
     const z = posBottom.getZ(i);
-    posBottom.setXYZ(i, -x, -boxH / 2.0 + z, y);
+    posBottom.setXYZ(i, x, -boxH / 2.0 + z, boxD - y);
   }
   bottomGeo.computeVertexNormals();
 

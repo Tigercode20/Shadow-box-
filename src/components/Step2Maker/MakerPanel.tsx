@@ -94,9 +94,10 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     const cv = getCV();
     if (!cv) return;
 
-    // Validate inputs to prevent NaN/0 crashes during typing
-    if (!boxW || !boxH || !boxD || !resolution || !thickness ||
-        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness)) {
+    // Validate inputs to prevent NaN/0/Infinity crashes during typing
+    if (!boxW || !boxH || !boxD || !resolution || !thickness || !targetW || !targetH || !lightZ || !frontZ || !scale ||
+        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness) ||
+        isNaN(targetW) || isNaN(targetH) || isNaN(lightZ) || isNaN(frontZ) || isNaN(scale)) {
       return;
     }
 
@@ -237,8 +238,9 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     if (!cv) return;
 
     // Validate inputs
-    if (!boxW || !boxH || !boxD || !resolution || !thickness ||
-        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness)) {
+    if (!boxW || !boxH || !boxD || !resolution || !thickness || !targetW || !targetH || !lightZ || !frontZ || !scale ||
+        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness) ||
+        isNaN(targetW) || isNaN(targetH) || isNaN(lightZ) || isNaN(frontZ) || isNaN(scale)) {
       return;
     }
 

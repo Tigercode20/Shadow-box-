@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import { getCV } from './opencv';
-import { drawContoursToCanvas, projectWallPanel, assembleCrossFoldLayout, extrudePanelToSTL, cvFlip, generateFoldedBoxSTL } from './projector';
+import { drawContoursToCanvas, projectWallPanel, assembleCrossFoldLayout, extrudePanelToSTL, generateFoldedBoxSTL } from './projector';
 import type { PanelResult } from './projector';
 
 export function downloadCanvasAsSTL(canvas: HTMLCanvasElement, filename: string, thicknessMm: number, pixelsPerMm: number) {
@@ -262,16 +262,10 @@ export function exportZipArchive(
   }
 
   function addPanelSTLToZip(panelName: string, panelObj: PanelResult, pixelsPerMm: number, wallName: string) {
-    let p = panelObj;
-    if (wallName === 'right') {
-      p = cvFlip(panelObj, 1);
-    } else if (wallName === 'bottom') {
-      p = cvFlip(panelObj, 0);
-    }
     let arrayBuffer = extrudePanelToSTL(
-      p.data,
-      p.width,
-      p.height,
+      panelObj.data,
+      panelObj.width,
+      panelObj.height,
       thickness_mm,
       pixelsPerMm,
       wallName,

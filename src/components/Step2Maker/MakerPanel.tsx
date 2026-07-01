@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCV } from '../../utils/opencv';
-import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas, extrudePanelToSTL, cvFlip, generateFoldedBoxSTL } from '../../utils/projector';
+import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas, extrudePanelToSTL, generateFoldedBoxSTL } from '../../utils/projector';
 import { downloadCanvasAsImage, downloadCanvasAsPDF, downloadCanvasAsSVG, downloadCanvasAsSTL, exportZipArchive } from '../../utils/exporters';
 import { SliderControl } from '../Common/SliderControl';
 import type { GeneratedStl } from '../../App';
@@ -180,9 +180,8 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     );
     stlList.push({ name: 'Left Wall', buffer: stlLeft });
 
-    const flippedRight = cvFlip(rightPanel, 1);
     const stlRight = extrudePanelToSTL(
-      flippedRight.data, flippedRight.width, flippedRight.height, thickness, resolution,
+      rightPanel.data, rightPanel.width, rightPanel.height, thickness, resolution,
       'right', boxW, boxH, boxD, lightZ, frontZ, panelType
     );
     stlList.push({ name: 'Right Wall', buffer: stlRight });
@@ -193,9 +192,8 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     );
     stlList.push({ name: 'Top Wall', buffer: stlTop });
 
-    const flippedBottom = cvFlip(bottomPanel, 0);
     const stlBottom = extrudePanelToSTL(
-      flippedBottom.data, flippedBottom.width, flippedBottom.height, thickness, resolution,
+      bottomPanel.data, bottomPanel.width, bottomPanel.height, thickness, resolution,
       'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType
     );
     stlList.push({ name: 'Bottom Wall', buffer: stlBottom });

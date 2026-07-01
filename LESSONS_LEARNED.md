@@ -93,6 +93,13 @@ This document records the mistakes made, user complaints, and implementation rul
   - Implemented automated winding order enforcement: forced all Level 1 holes to Clockwise (`forceClockwise`), and Level 2 solid islands to Counter-Clockwise (`forceCounterClockwise`).
   - Organized the contours by hierarchy: Level 1 contours are added as holes inside the main CCW rectangle; Level 2 contours (solid islands inside Level 1 holes, e.g. Gojo's eye pupils and skin details) are extruded as separate solid shapes inside the holes; and Level 3 contours (holes inside Level 2 islands) are added as holes to the Level 2 shapes. This guarantees perfect watertight CSG rendering in 3D without any triangulation failures.
 
+### 14. Distinct Solid and Cutout Modes for STL Extrusion
+- **Complaint**: *"لما تيجي تعمل ال 3d اعمل علي اساس الملفات المنفصله مش الملف المجمع علشان مايعملش حاجات زياده زي الحواف"* (When you make the 3D, make it based on the individual files, not the merged/assembled file, so it doesn't make extra things like the borders).
+- **Resolution**:
+  - Differentiated the shape extrusion logic in `extrudePanelToSTL`:
+    - **Solid Mode** (`panelBg === 0`): Manually constructs the CCW outer rectangular frame of the panel and subtracts the contours as CW holes, preserving the solid wall plate with detail cutouts.
+    - **Cutout Mode** (`panelBg === 255`): Extrudes only the detail shapes themselves (Level 1 contours as CCW outer shapes, Level 2 contours as CW inner holes). This removes all forced rectangular background boundaries, frames, or extra margins, ensuring the 3D model contains only the actual vector details, matching the individual exported 2D files exactly.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

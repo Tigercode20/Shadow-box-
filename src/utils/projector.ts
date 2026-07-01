@@ -429,45 +429,16 @@ export function extrudePanelToSTL(
   // Load into OpenCV mat
   const mat = cv.matFromArray(height, width, cv.CV_8UC1, Array.from(panelData));
   
-  // If Cutout mode, draw a 3mm solid border frame around the mat edges to connect shapes
-  if (panelBg === 255) {
-    const borderPx = Math.round(3.0 * pixelsPerMm);
-    for (let r = 0; r < height; r++) {
-      for (let c = 0; c < width; c++) {
-        if (r < borderPx || r >= height - borderPx || c < borderPx || c >= width - borderPx) {
-          mat.data[r * width + c] = 0; // Solid printed boundary
-        }
-      }
-    }
-  }
-
+  // We ALWAYS use THRESH_BINARY_INV because we want the solid details (value 0) to be white (255)
+  // so that we can find their contours!
   const threshMat = new cv.Mat();
-  if (panelBg === 0) {
-    // Solid mode: we want the cutout holes (which are 0) to be white (255)
-    cv.threshold(mat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
-  } else {
-    // Cutout mode: we want the empty spaces (which are 255) to be white (255)
-    cv.threshold(mat, threshMat, 127, 255, cv.THRESH_BINARY);
-  }
+  cv.threshold(mat, threshMat, 127, 255, cv.THRESH_BINARY_INV);
 
   const contours = new cv.MatVector();
   const hierarchy = new cv.Mat();
   cv.findContours(threshMat, contours, hierarchy, cv.RETR_CCOMP, cv.CHAIN_APPROX_TC89_L1);
 
   const shapes: THREE.Shape[] = [];
-
-  // Create the main rectangular outer shape in pixel space (oriented CCW)
-  const outerPoints = [
-    new THREE.Vector2(0, 0),
-    new THREE.Vector2(width, 0),
-    new THREE.Vector2(width, height),
-    new THREE.Vector2(0, height)
-  ];
-  const mainShape = new THREE.Shape(outerPoints);
-  shapes.push(mainShape);
-
-  // Map to store Level 2 shapes (solid islands inside Level 1 holes)
-  const holeToIslandMap = new Map<number, THREE.Shape>();
 
   // Winding order helpers
   const forceClockwise = (pts: THREE.Vector2[]) => {
@@ -492,58 +463,119 @@ export function extrudePanelToSTL(
     return pts;
   };
 
-  // 1. First pass: build Level 1 holes (CW) and Level 2 islands (CCW)
-  for (let i = 0; i < contours.size(); i++) {
-    const contour = contours.get(i);
-    if (contour.rows < 3) continue;
+  if (panelBg === 0) {
+    // ==========================================
+    // SOLID MODE: Solid plate with cutout holes
+    // ==========================================
+    
+    // Create the main rectangular outer shape in pixel space (oriented CCW)
+    const outerPoints = [
+      new THREE.Vector2(0, 0),
+      new THREE.Vector2(width, 0),
+      new THREE.Vector2(width, height),
+      new THREE.Vector2(0, height)
+    ];
+    const mainShape = new THREE.Shape(outerPoints);
+    shapes.push(mainShape);
 
-    const area = cv.contourArea(contour);
-    if (area < 2) continue; // Skip tiny single-pixel noise
+    // Map to store Level 2 shapes (solid islands inside Level 1 holes)
+    const holeToIslandMap = new Map<number, THREE.Shape>();
 
-    const h = hierarchy.intPtr(0, i);
-    const parentIdx = h[3];
+    // 1. First pass: build Level 1 holes (CW) and Level 2 islands (CCW)
+    for (let i = 0; i < contours.size(); i++) {
+      const contour = contours.get(i);
+      if (contour.rows < 3) continue;
 
-    const points: THREE.Vector2[] = [];
-    for (let j = 0; j < contour.rows; j++) {
-      const c_val = contour.data32S[j * 2];
-      const r_val = contour.data32S[j * 2 + 1];
-      points.push(new THREE.Vector2(c_val, height - r_val));
+      const area = cv.contourArea(contour);
+      if (area < 2) continue; // Skip tiny single-pixel noise
+
+      const h = hierarchy.intPtr(0, i);
+      const parentIdx = h[3];
+
+      const points: THREE.Vector2[] = [];
+      for (let j = 0; j < contour.rows; j++) {
+        const c_val = contour.data32S[j * 2];
+        const r_val = contour.data32S[j * 2 + 1];
+        points.push(new THREE.Vector2(c_val, height - r_val));
+      }
+
+      if (parentIdx === -1) {
+        // Level 1: Cutout Hole (empty space) -> Must be Clockwise
+        forceClockwise(points);
+        mainShape.holes.push(new THREE.Path(points));
+      } else {
+        // Level 2: Solid Island inside Level 1 Hole -> Must be Counter-Clockwise
+        forceCounterClockwise(points);
+        const islandShape = new THREE.Shape(points);
+        shapes.push(islandShape);
+        holeToIslandMap.set(i, islandShape);
+      }
     }
 
-    if (parentIdx === -1) {
-      // Level 1: Cutout Hole (empty space) -> Must be Clockwise
-      forceClockwise(points);
-      mainShape.holes.push(new THREE.Path(points));
-    } else {
-      // Level 2: Solid Island inside Level 1 Hole -> Must be Counter-Clockwise
-      forceCounterClockwise(points);
-      const islandShape = new THREE.Shape(points);
-      shapes.push(islandShape);
-      holeToIslandMap.set(i, islandShape);
-    }
-  }
-
-  // 2. Second pass: link Level 3 holes (CW) inside Level 2 islands
-  for (let i = 0; i < contours.size(); i++) {
-    const h = hierarchy.intPtr(0, i);
-    const parentIdx = h[3];
-    if (parentIdx !== -1) {
-      const grandParentIdx = hierarchy.intPtr(0, parentIdx)[3];
-      if (grandParentIdx !== -1) {
-        // Level 3 hole inside Level 2 island
-        const parentIsland = holeToIslandMap.get(parentIdx);
-        if (parentIsland) {
-          const contour = contours.get(i);
-          if (contour.rows >= 3) {
-            const points: THREE.Vector2[] = [];
-            for (let j = 0; j < contour.rows; j++) {
-              const c_val = contour.data32S[j * 2];
-              const r_val = contour.data32S[j * 2 + 1];
-              points.push(new THREE.Vector2(c_val, height - r_val));
+    // 2. Second pass: link Level 3 holes (CW) inside Level 2 islands
+    for (let i = 0; i < contours.size(); i++) {
+      const h = hierarchy.intPtr(0, i);
+      const parentIdx = h[3];
+      if (parentIdx !== -1) {
+        const grandParentIdx = hierarchy.intPtr(0, parentIdx)[3];
+        if (grandParentIdx !== -1) {
+          // Level 3 hole inside Level 2 island
+          const parentIsland = holeToIslandMap.get(parentIdx);
+          if (parentIsland) {
+            const contour = contours.get(i);
+            if (contour.rows >= 3) {
+              const points: THREE.Vector2[] = [];
+              for (let j = 0; j < contour.rows; j++) {
+                const c_val = contour.data32S[j * 2];
+                const r_val = contour.data32S[j * 2 + 1];
+                points.push(new THREE.Vector2(c_val, height - r_val));
+              }
+              forceClockwise(points);
+              parentIsland.holes.push(new THREE.Path(points));
             }
-            forceClockwise(points);
-            parentIsland.holes.push(new THREE.Path(points));
           }
+        }
+      }
+    }
+
+  } else {
+    // ==========================================
+    // CUTOUT MODE: Extrude only the solid details (no outer rectangle, no extra border frames)
+    // ==========================================
+
+    // Map to store Level 1 shapes (outer details)
+    const shapeMap = new Map<number, THREE.Shape>();
+
+    // 1. First pass: build Level 1 shapes (CCW) and Level 2 holes (CW)
+    for (let i = 0; i < contours.size(); i++) {
+      const contour = contours.get(i);
+      if (contour.rows < 3) continue;
+
+      const area = cv.contourArea(contour);
+      if (area < 2) continue; // Skip tiny single-pixel noise
+
+      const h = hierarchy.intPtr(0, i);
+      const parentIdx = h[3];
+
+      const points: THREE.Vector2[] = [];
+      for (let j = 0; j < contour.rows; j++) {
+        const c_val = contour.data32S[j * 2];
+        const r_val = contour.data32S[j * 2 + 1];
+        points.push(new THREE.Vector2(c_val, height - r_val));
+      }
+
+      if (parentIdx === -1) {
+        // Level 1: Solid Detail Shape -> Must be Counter-Clockwise
+        forceCounterClockwise(points);
+        const detailShape = new THREE.Shape(points);
+        shapes.push(detailShape);
+        shapeMap.set(i, detailShape);
+      } else {
+        // Level 2: Cutout Hole inside Level 1 Shape -> Must be Clockwise
+        forceClockwise(points);
+        const parentShape = shapeMap.get(parentIdx);
+        if (parentShape) {
+          parentShape.holes.push(new THREE.Path(points));
         }
       }
     }

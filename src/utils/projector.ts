@@ -861,10 +861,6 @@ export function generateFoldedBoxSTL(
   right: PanelResult,
   top: PanelResult,
   bottom: PanelResult,
-  targetPanelData: Uint8Array,
-  targetWPixels: number,
-  targetHPixels: number,
-  targetPxPerMm: number,
   boxW: number,
   boxH: number,
   boxD: number,
@@ -878,12 +874,32 @@ export function generateFoldedBoxSTL(
   const flippedRight = cvFlip(right, 1);
   const flippedBottom = cvFlip(bottom, 0);
 
+  // Construct front base panel programmatically to match boxW x boxH exactly (instead of the target canvas resolution)
+  const W_res = Math.round(boxW * resolution);
+  const H_res = Math.round(boxH * resolution);
+  const frontData = new Uint8Array(W_res * H_res);
+  frontData.fill(panelType); // 255 for Cutout mode, 0 for Solid mode
+  
+  // Draw center hole (black circle of radius 5 mm)
+  const cx = Math.floor(W_res / 2);
+  const cy = Math.floor(H_res / 2);
+  const r_px = Math.round(5 * resolution);
+  for (let r = 0; r < H_res; r++) {
+    for (let c = 0; c < W_res; c++) {
+      const dx = c - cx;
+      const dy = r - cy;
+      if (dx * dx + dy * dy <= r_px * r_px) {
+        frontData[r * W_res + c] = 0; // Black hole
+      }
+    }
+  }
+
   // 1. Generate the 5 geometries in flat space
   const leftGeo = extrudePanelToGeometry(left.data, left.width, left.height, thickness, resolution, 'left', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const rightGeo = extrudePanelToGeometry(flippedRight.data, flippedRight.width, flippedRight.height, thickness, resolution, 'right', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const topGeo = extrudePanelToGeometry(top.data, top.width, top.height, thickness, resolution, 'top', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const bottomGeo = extrudePanelToGeometry(flippedBottom.data, flippedBottom.width, flippedBottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
-  const targetGeo = extrudePanelToGeometry(targetPanelData, targetWPixels, targetHPixels, thickness, targetPxPerMm, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
+  const targetGeo = extrudePanelToGeometry(frontData, W_res, H_res, thickness, resolution, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
 
   // 2. Transform each geometry to its 3D folded position in the box
   

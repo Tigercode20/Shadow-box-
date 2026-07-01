@@ -361,25 +361,11 @@ export function exportZipArchive(
     zip.file("cross_fold_layout.stl", crossArrayBuffer);
 
     // Extrude folded box
-    let targetCtx = hiResTargetCanvas.getContext('2d')!;
-    let targetImgData = targetCtx.getImageData(0, 0, hiResTargetCanvas.width, hiResTargetCanvas.height);
-    let targetWPixels = hiResTargetCanvas.width;
-    let targetHPixels = hiResTargetCanvas.height;
-    let targetPanelData = new Uint8Array(targetWPixels * targetHPixels);
-    for (let i = 0; i < targetWPixels * targetHPixels; i++) {
-      targetPanelData[i] = targetImgData.data[i * 4];
-    }
-    let targetPxPerMm = targetWPixels / target_w;
-
     let foldedBoxArrayBuffer = generateFoldedBoxSTL(
       hiResWallLeft,
       hiResWallRight,
       hiResWallTop,
       hiResWallBottom,
-      targetPanelData,
-      targetWPixels,
-      targetHPixels,
-      targetPxPerMm,
       box_w,
       box_h,
       box_d,

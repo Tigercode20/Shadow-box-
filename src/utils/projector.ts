@@ -874,11 +874,15 @@ export function generateFoldedBoxSTL(
   thickness: number,
   panelType: number
 ): ArrayBuffer {
+  // Flip Right Wall horizontally and Bottom Wall vertically to match their exact box placement
+  const flippedRight = cvFlip(right, 1);
+  const flippedBottom = cvFlip(bottom, 0);
+
   // 1. Generate the 5 geometries in flat space
   const leftGeo = extrudePanelToGeometry(left.data, left.width, left.height, thickness, resolution, 'left', boxW, boxH, boxD, lightZ, frontZ, panelType);
-  const rightGeo = extrudePanelToGeometry(right.data, right.width, right.height, thickness, resolution, 'right', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const rightGeo = extrudePanelToGeometry(flippedRight.data, flippedRight.width, flippedRight.height, thickness, resolution, 'right', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const topGeo = extrudePanelToGeometry(top.data, top.width, top.height, thickness, resolution, 'top', boxW, boxH, boxD, lightZ, frontZ, panelType);
-  const bottomGeo = extrudePanelToGeometry(bottom.data, bottom.width, bottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const bottomGeo = extrudePanelToGeometry(flippedBottom.data, flippedBottom.width, flippedBottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
   const targetGeo = extrudePanelToGeometry(targetPanelData, targetWPixels, targetHPixels, thickness, targetPxPerMm, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
 
   // 2. Transform each geometry to its 3D folded position in the box
@@ -923,13 +927,13 @@ export function generateFoldedBoxSTL(
   }
   bottomGeo.computeVertexNormals();
 
-  // Target base (front panel) stays flat at Z = 0
+  // Target base (front panel) centered around (0,0) and stays flat at Z = -z (extrude outwards)
   const posTarget = targetGeo.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < posTarget.count; i++) {
     const x = posTarget.getX(i);
     const y = posTarget.getY(i);
     const z = posTarget.getZ(i);
-    posTarget.setXYZ(i, x, y, z);
+    posTarget.setXYZ(i, x - boxW / 2.0, y - boxH / 2.0, -z);
   }
   targetGeo.computeVertexNormals();
 

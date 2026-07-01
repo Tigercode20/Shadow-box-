@@ -426,8 +426,9 @@ export function extrudePanelToSTL(
   const cv = getCV();
   if (!cv) return new ArrayBuffer(84);
 
-  // Load into OpenCV mat
-  const mat = cv.matFromArray(height, width, cv.CV_8UC1, Array.from(panelData));
+  // Load into OpenCV mat using direct buffer copy to avoid Invalid array length error on large images
+  const mat = new cv.Mat(height, width, cv.CV_8UC1);
+  mat.data.set(panelData);
   
   // We ALWAYS use THRESH_BINARY_INV because we want the solid details (value 0) to be white (255)
   // so that we can find their contours!

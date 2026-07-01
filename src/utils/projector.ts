@@ -624,7 +624,7 @@ export function extrudePanelToGeometry(
   const geometry = new THREE.ExtrudeGeometry(shapes, extrudeSettings);
   const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
 
-  const isSlanted = true; // Enable slanted cuts to match the direction of the light rays
+  const isSlanted = !!wallName && ['left', 'right', 'top', 'bottom'].includes(wallName); // Enable slanted cuts only for the 4 side walls
 
   // Apply slant and millimeter scaling and origin shift
   for (let i = 0; i < posAttr.count; i++) {

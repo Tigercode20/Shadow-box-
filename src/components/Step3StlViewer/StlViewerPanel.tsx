@@ -76,6 +76,7 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generate
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(mountRef.current.clientWidth, mountRef.current.clientHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.autoClear = false; // Disable autoClear to support overlay rendering
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -102,12 +103,108 @@ export const StlViewerPanel: React.FC<StlViewerPanelProps> = ({ active, generate
     grid.position.y = -0.01;
     scene.add(grid);
 
+    // Set up Axis Gizmo Scene (Blender/SolidWorks style)
+    const gizmoScene = new THREE.Scene();
+
+    // X Axis - Red
+    const arrowX = new THREE.ArrowHelper(
+      new THREE.Vector3(1, 0, 0),
+      new THREE.Vector3(0, 0, 0),
+      1.1,
+      0xff3b30, // iOS Red
+      0.3,
+      0.2
+    );
+    gizmoScene.add(arrowX);
+
+    // Y Axis - Green
+    const arrowY = new THREE.ArrowHelper(
+      new THREE.Vector3(0, 1, 0),
+      new THREE.Vector3(0, 0, 0),
+      1.1,
+      0x34c759, // iOS Green
+      0.3,
+      0.2
+    );
+    gizmoScene.add(arrowY);
+
+    // Z Axis - Blue
+    const arrowZ = new THREE.ArrowHelper(
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(0, 0, 0),
+      1.1,
+      0x007aff, // iOS Blue
+      0.3,
+      0.2
+    );
+    gizmoScene.add(arrowZ);
+
+    // Canvas-based labels X, Y, Z
+    const createTextSprite = (text: string, color: string) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.font = 'bold 36px Outfit, sans-serif';
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 32, 32);
+      }
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(0.6, 0.6, 1);
+      return sprite;
+    };
+
+    const labelX = createTextSprite('X', '#ff3b30');
+    labelX.position.set(1.4, 0, 0);
+    gizmoScene.add(labelX);
+
+    const labelY = createTextSprite('Y', '#34c759');
+    labelY.position.set(0, 1.4, 0);
+    gizmoScene.add(labelY);
+
+    const labelZ = createTextSprite('Z', '#007aff');
+    labelZ.position.set(0, 0, 1.4);
+    gizmoScene.add(labelZ);
+
+    // Gizmo camera
+    const gizmoCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 10);
+    gizmoCamera.position.set(0, 0, 3.5);
+
     // Animation loop
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
       controls.update();
+
+      const width = mountRef.current?.clientWidth || 800;
+      const height = mountRef.current?.clientHeight || 600;
+
+      // Sync gizmo camera position with main camera's angle
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      gizmoCamera.position.copy(dir).multiplyScalar(-3.5);
+      gizmoCamera.up.copy(camera.up);
+      gizmoCamera.lookAt(0, 0, 0);
+
+      // Render main scene
+      renderer.clear(); // Clear all buffers manually once per frame
+      renderer.setViewport(0, 0, width, height);
+      renderer.setScissor(0, 0, width, height);
+      renderer.setScissorTest(true);
       renderer.render(scene, camera);
+
+      // Render overlay gizmo in bottom-right corner
+      const gizmoSize = 80;
+      renderer.setViewport(width - gizmoSize - 15, 15, gizmoSize, gizmoSize);
+      renderer.setScissor(width - gizmoSize - 15, 15, gizmoSize, gizmoSize);
+      renderer.setScissorTest(true);
+      renderer.clearDepth(); // Clear depth buffer so axes render on top
+      renderer.render(gizmoScene, gizmoCamera);
     };
     animate();
 

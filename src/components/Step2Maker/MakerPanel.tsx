@@ -21,7 +21,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
   // Placement
   const [scale, setScale] = useState<number>(50);
   const [offsetX, setOffsetX] = useState<number>(0);
-  const [offsetY, setOffsetY] = useState<number>(2);
+  const [offsetY, setOffsetY] = useState<number>(0);
 
   // Box dimensions
   const [boxW, setBoxW] = useState<number>(114);
@@ -96,8 +96,8 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
     // Validate inputs to prevent NaN/0/Infinity crashes during typing
     if (!boxW || !boxH || !boxD || !resolution || !thickness || !targetW || !targetH || !lightZ || !frontZ || !scale ||
-        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness) ||
-        isNaN(targetW) || isNaN(targetH) || isNaN(lightZ) || isNaN(frontZ) || isNaN(scale)) {
+      isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness) ||
+      isNaN(targetW) || isNaN(targetH) || isNaN(lightZ) || isNaN(frontZ) || isNaN(scale)) {
       return;
     }
 
@@ -146,14 +146,14 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
     const imgScaleFract = scale / 100.0;
 
     // Calculate panels
-    const leftPanel = projectWallPanel('left', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                       frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
-    const rightPanel = projectWallPanel('right', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                        frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
-    const topPanel = projectWallPanel('top', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
-    const bottomPanel = projectWallPanel('bottom', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                         frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
+    const leftPanel = projectWallPanel('left', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
+    const rightPanel = projectWallPanel('right', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
+    const topPanel = projectWallPanel('top', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
+    const bottomPanel = projectWallPanel('bottom', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, resolution, panelType, imgScaleFract, offsetX, offsetY);
 
 
 
@@ -239,8 +239,8 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
     // Validate inputs
     if (!boxW || !boxH || !boxD || !resolution || !thickness || !targetW || !targetH || !lightZ || !frontZ || !scale ||
-        isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness) ||
-        isNaN(targetW) || isNaN(targetH) || isNaN(lightZ) || isNaN(frontZ) || isNaN(scale)) {
+      isNaN(boxW) || isNaN(boxH) || isNaN(boxD) || isNaN(resolution) || isNaN(thickness) ||
+      isNaN(targetW) || isNaN(targetH) || isNaN(lightZ) || isNaN(frontZ) || isNaN(scale)) {
       return;
     }
 
@@ -391,14 +391,14 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
     const imgScaleFract = scale / 100.0;
 
-    const leftPanel = projectWallPanel('left', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                       frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
-    const rightPanel = projectWallPanel('right', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                        frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
-    const topPanel = projectWallPanel('top', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
-    const bottomPanel = projectWallPanel('bottom', targetImgData, targetW, targetH, boxW, boxH, boxD, 
-                                         frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
+    const leftPanel = projectWallPanel('left', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
+    const rightPanel = projectWallPanel('right', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
+    const topPanel = projectWallPanel('top', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
+    const bottomPanel = projectWallPanel('bottom', targetImgData, targetW, targetH, boxW, boxH, boxD,
+      frontZ, frontZ + boxD, lightZ, exportRes, panelType, imgScaleFract, offsetX, offsetY);
 
     const hiResCrossCanvas = assembleCrossFoldLayout(leftPanel, rightPanel, topPanel, bottomPanel, boxW, boxH, boxD, exportRes, panelType, drawSlits);
 
@@ -484,22 +484,22 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
           <div className="card-title">
             <i className="fa-solid fa-arrows-to-eye" style={{ color: 'var(--primary)' }}></i> Silhouette Placement
           </div>
-          
+
           <div className="input-group">
             <label className="file-upload-btn" htmlFor="imageFileInput">
               <i className="fa-solid fa-cloud-arrow-up"></i>
               <span>{fileName}</span>
             </label>
-            <input 
-              type="file" 
-              id="imageFileInput" 
-              accept="image/*" 
-              style={{ display: 'none' }} 
+            <input
+              type="file"
+              id="imageFileInput"
+              accept="image/*"
+              style={{ display: 'none' }}
               onChange={handleFileChange}
             />
           </div>
 
-          <SliderControl 
+          <SliderControl
             label="Scale (%)"
             min={10}
             max={500}
@@ -507,7 +507,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
             suffix="%"
             onChange={setScale}
           />
-          <SliderControl 
+          <SliderControl
             label="Shift X (mm)"
             min={-500}
             max={500}
@@ -515,7 +515,7 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
             suffix=" mm"
             onChange={setOffsetX}
           />
-          <SliderControl 
+          <SliderControl
             label="Shift Y (mm)"
             min={-500}
             max={500}
@@ -537,28 +537,28 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
             <div className="form-grid">
               <div className="input-group">
                 <label>Width (X)</label>
-                <input 
-                  type="number" 
-                  value={boxW} 
-                  onChange={(e) => setBoxW(parseFloat(e.target.value) || 0)} 
+                <input
+                  type="number"
+                  value={boxW}
+                  onChange={(e) => setBoxW(parseFloat(e.target.value) || 0)}
                   step="0.1"
                 />
               </div>
               <div className="input-group">
                 <label>Height (Y)</label>
-                <input 
-                  type="number" 
-                  value={boxH} 
-                  onChange={(e) => setBoxH(parseFloat(e.target.value) || 0)} 
+                <input
+                  type="number"
+                  value={boxH}
+                  onChange={(e) => setBoxH(parseFloat(e.target.value) || 0)}
                   step="0.1"
                 />
               </div>
               <div className="input-group full-width">
                 <label>Depth (Z)</label>
-                <input 
-                  type="number" 
-                  value={boxD} 
-                  onChange={(e) => setBoxD(parseFloat(e.target.value) || 0)} 
+                <input
+                  type="number"
+                  value={boxD}
+                  onChange={(e) => setBoxD(parseFloat(e.target.value) || 0)}
                   step="0.1"
                 />
               </div>
@@ -575,37 +575,37 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
             <div className="form-grid">
               <div className="input-group">
                 <label>Light Source Z</label>
-                <input 
-                  type="number" 
-                  value={lightZ} 
-                  onChange={(e) => setLightZ(parseFloat(e.target.value) || 0)} 
+                <input
+                  type="number"
+                  value={lightZ}
+                  onChange={(e) => setLightZ(parseFloat(e.target.value) || 0)}
                   step="0.1"
                 />
               </div>
               <div className="input-group">
                 <label>Front Opening Z</label>
-                <input 
-                  type="number" 
-                  value={frontZ} 
-                  onChange={(e) => setFrontZ(parseFloat(e.target.value) || 0)} 
+                <input
+                  type="number"
+                  value={frontZ}
+                  onChange={(e) => setFrontZ(parseFloat(e.target.value) || 0)}
                   step="0.1"
                 />
               </div>
               <div className="input-group">
                 <label>Target Width</label>
-                <input 
-                  type="number" 
-                  value={targetW} 
-                  onChange={(e) => setTargetW(parseFloat(e.target.value) || 0)} 
+                <input
+                  type="number"
+                  value={targetW}
+                  onChange={(e) => setTargetW(parseFloat(e.target.value) || 0)}
                   step="0.1"
                 />
               </div>
               <div className="input-group">
                 <label>Target Height</label>
-                <input 
-                  type="number" 
-                  value={targetH} 
-                  onChange={(e) => setTargetH(parseFloat(e.target.value) || 0)} 
+                <input
+                  type="number"
+                  value={targetH}
+                  onChange={(e) => setTargetH(parseFloat(e.target.value) || 0)}
                   step="0.1"
                 />
               </div>
@@ -621,42 +621,42 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
           <div className="details-content">
             <div className="input-group">
               <label>Resolution (pixels/mm)</label>
-              <input 
-                type="number" 
-                value={resolution} 
-                onChange={(e) => setResolution(parseFloat(e.target.value) || 1)} 
+              <input
+                type="number"
+                value={resolution}
+                onChange={(e) => setResolution(parseFloat(e.target.value) || 1)}
                 step="0.1"
               />
             </div>
 
             <div className="input-group">
               <label>Thickness (mm) [3D STL]</label>
-              <input 
-                type="number" 
-                value={thickness} 
-                onChange={(e) => setThickness(parseFloat(e.target.value) || 1)} 
+              <input
+                type="number"
+                value={thickness}
+                onChange={(e) => setThickness(parseFloat(e.target.value) || 1)}
                 step="0.1"
               />
             </div>
-            
+
             <div className="input-group">
               <label>Panel Type</label>
               <label className="radio-option">
-                <input 
-                  type="radio" 
-                  name="panel_type" 
-                  value="255" 
-                  checked={panelType === 255} 
+                <input
+                  type="radio"
+                  name="panel_type"
+                  value="255"
+                  checked={panelType === 255}
                   onChange={() => setPanelType(255)}
                 />
                 <span>Cutout (White bg / Solid cuts)</span>
               </label>
               <label className="radio-option">
-                <input 
-                  type="radio" 
-                  name="panel_type" 
-                  value="0" 
-                  checked={panelType === 0} 
+                <input
+                  type="radio"
+                  name="panel_type"
+                  value="0"
+                  checked={panelType === 0}
                   onChange={() => setPanelType(0)}
                 />
                 <span>Solid (Black bg / Cutout holes)</span>
@@ -665,9 +665,9 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
             <div className="input-group" style={{ borderTop: '1px solid var(--card-border)', paddingTop: '10px' }}>
               <label className="checkbox-group">
-                <input 
-                  type="checkbox" 
-                  checked={useEdges} 
+                <input
+                  type="checkbox"
+                  checked={useEdges}
                   onChange={(e) => setUseEdges(e.target.checked)}
                 />
                 <span>Outline Mode (Canny Edges)</span>
@@ -678,17 +678,17 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
               <div className="form-grid">
                 <div className="input-group">
                   <label>Thresh 1</label>
-                  <input 
-                    type="number" 
-                    value={thresh1} 
+                  <input
+                    type="number"
+                    value={thresh1}
                     onChange={(e) => setThresh1(parseInt(e.target.value) || 0)}
                   />
                 </div>
                 <div className="input-group">
                   <label>Thresh 2</label>
-                  <input 
-                    type="number" 
-                    value={thresh2} 
+                  <input
+                    type="number"
+                    value={thresh2}
                     onChange={(e) => setThresh2(parseInt(e.target.value) || 0)}
                   />
                 </div>
@@ -697,9 +697,9 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
             <div className="input-group" style={{ borderTop: '1px solid var(--card-border)', paddingTop: '10px' }}>
               <label className="checkbox-group">
-                <input 
-                  type="checkbox" 
-                  checked={useCustomShape} 
+                <input
+                  type="checkbox"
+                  checked={useCustomShape}
                   onChange={(e) => setUseCustomShape(e.target.checked)}
                 />
                 <span>Custom Panel Shape (Silhouette)</span>
@@ -708,9 +708,9 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
             <div className="input-group">
               <label className="checkbox-group">
-                <input 
-                  type="checkbox" 
-                  checked={groundBottom} 
+                <input
+                  type="checkbox"
+                  checked={groundBottom}
                   onChange={(e) => setGroundBottom(e.target.checked)}
                 />
                 <span>Ground Bottom Silhouette</span>
@@ -719,9 +719,9 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
             <div className="input-group">
               <label className="checkbox-group">
-                <input 
-                  type="checkbox" 
-                  checked={drawSlits} 
+                <input
+                  type="checkbox"
+                  checked={drawSlits}
                   onChange={(e) => setDrawSlits(e.target.checked)}
                 />
                 <span>Add Alignment Slits (Mortise)</span>
@@ -796,9 +796,9 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
               <i className="fa-solid fa-file-zipper" style={{ color: 'var(--primary)' }}></i>
               <span>Select Export Formats</span>
             </div>
-            
+
             <div className="modal-body">
-              <div 
+              <div
                 className={`format-option-row ${selectedFormats.svg ? 'active' : ''}`}
                 onClick={() => setSelectedFormats({ ...selectedFormats, svg: !selectedFormats.svg })}
               >
@@ -806,15 +806,15 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                   <div className="format-label-title">SVG Vector Contours</div>
                   <div className="format-label-desc">Best for laser cutters, CNC routers, & Illustrator.</div>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={selectedFormats.svg} 
-                  onChange={() => {}} 
+                <input
+                  type="checkbox"
+                  checked={selectedFormats.svg}
+                  onChange={() => { }}
                   style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
                 />
               </div>
 
-              <div 
+              <div
                 className={`format-option-row ${selectedFormats.pdf ? 'active' : ''}`}
                 onClick={() => setSelectedFormats({ ...selectedFormats, pdf: !selectedFormats.pdf })}
               >
@@ -822,15 +822,15 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                   <div className="format-label-title">PDF Document Layout</div>
                   <div className="format-label-desc">Ideal for direct high-resolution printing.</div>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={selectedFormats.pdf} 
-                  onChange={() => {}} 
+                <input
+                  type="checkbox"
+                  checked={selectedFormats.pdf}
+                  onChange={() => { }}
                   style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
                 />
               </div>
 
-              <div 
+              <div
                 className={`format-option-row ${selectedFormats.png ? 'active' : ''}`}
                 onClick={() => setSelectedFormats({ ...selectedFormats, png: !selectedFormats.png })}
               >
@@ -838,15 +838,15 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                   <div className="format-label-title">PNG Raster Images</div>
                   <div className="format-label-desc">Lossless transparency and clean details.</div>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={selectedFormats.png} 
-                  onChange={() => {}} 
+                <input
+                  type="checkbox"
+                  checked={selectedFormats.png}
+                  onChange={() => { }}
                   style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
                 />
               </div>
 
-              <div 
+              <div
                 className={`format-option-row ${selectedFormats.jpg ? 'active' : ''}`}
                 onClick={() => setSelectedFormats({ ...selectedFormats, jpg: !selectedFormats.jpg })}
               >
@@ -854,15 +854,15 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                   <div className="format-label-title">JPEG Compressed Images</div>
                   <div className="format-label-desc">Standard image format for previews & sharing.</div>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={selectedFormats.jpg} 
-                  onChange={() => {}} 
+                <input
+                  type="checkbox"
+                  checked={selectedFormats.jpg}
+                  onChange={() => { }}
                   style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
                 />
               </div>
 
-              <div 
+              <div
                 className={`format-option-row ${selectedFormats.stl ? 'active' : ''}`}
                 onClick={() => setSelectedFormats({ ...selectedFormats, stl: !selectedFormats.stl })}
               >
@@ -870,10 +870,10 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
                   <div className="format-label-title">STL 3D Models</div>
                   <div className="format-label-desc">Extruded watertight solids ready for 3D printing.</div>
                 </div>
-                <input 
-                  type="checkbox" 
-                  checked={selectedFormats.stl} 
-                  onChange={() => {}} 
+                <input
+                  type="checkbox"
+                  checked={selectedFormats.stl}
+                  onChange={() => { }}
                   style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }}
                 />
               </div>
@@ -881,8 +881,8 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
 
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-              <button 
-                className="btn" 
+              <button
+                className="btn"
                 onClick={() => {
                   if (!Object.values(selectedFormats).some(v => v)) {
                     alert("Please select at least one format!");

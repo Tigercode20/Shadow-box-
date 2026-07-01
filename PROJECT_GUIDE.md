@@ -68,9 +68,17 @@ Contours are extracted using OpenCV's `cv.findContours` hierarchically. Outer co
 
 ### 🖨️ 3D STL Mesh Extrusion
 For 3D printing, 2D binary projection panels are extruded into 3D watertight solid meshes (`.stl`).
-- **Voxel/Pixel-level Triangulation**: Each solid pixel is represented as a 3D rectangular box (prism) of size $W_{pixel} \times H_{pixel} \times T_{thickness}$ (mm).
-- **Face Optimization**:
-  - **Front Face** ($Z = \text{thickness}$): Rendered for every solid pixel.
-  - **Back Face** ($Z = 0$): Rendered for every solid pixel.
-  - **Side Faces** ($X$, $Y$ boundaries): Rendered only when a solid pixel shares an edge with an empty pixel (or boundary). This guarantees a watertight manifold model with minimal triangle counts.
+- **Smooth Vector Contour-based Extrusion**:
+  - Instead of pixel block extrusion, OpenCV's `cv.findContours` extracts the vector paths.
+  - `THREE.Shape` instances are constructed using parent (CCW winding) and hole (CW winding) paths.
+  - Three.js `THREE.ExtrudeGeometry` compiles these shapes into watertight manifold models.
+- **Ray-Aligned Slanted Extrusion**:
+  - The side cuts of the details are slanted matching the point light source $S(0, 0, Z_{light})$ to prevent shadow casting from thickness.
+  - Flat panel edges contacting the outer box boundaries are locked to a flat 90-degree slant to keep mounting interfaces straight.
+- **Geometry Flipping & Alignment**:
+  - Left and Top walls are extruded directly.
+  - Right and Bottom walls are flipped horizontally/vertically via `cvFlip` before extrusion to match their exact correct orientations in the unfolded box layout.
+- **X-axis Rotation**:
+  - Geometries are rotated 90 degrees around the X-axis (`geometry.rotateX(-Math.PI / 2)`) so the 3D models lie flat in the XZ plane (on the print bed) with their thickness pointing upwards (Y direction).
+
 

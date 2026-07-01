@@ -264,16 +264,18 @@ export function assembleCrossFoldLayout(
   let base_x_end = D_res + W_res;
   let base_y_end = D_res + H_res;
   
-  ctx.fillStyle = '#f0f0f5';
-  ctx.fillRect(base_x_start, base_y_start, W_res, H_res);
-  
-  ctx.strokeStyle = '#646473';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(base_x_start, base_y_start, W_res, H_res);
+  if (panel_bg !== 255) {
+    ctx.fillStyle = '#f0f0f5';
+    ctx.fillRect(base_x_start, base_y_start, W_res, H_res);
+    
+    ctx.strokeStyle = '#646473';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(base_x_start, base_y_start, W_res, H_res);
+  }
   
   let center_x = base_x_start + Math.floor(W_res / 2);
   let center_y = base_y_start + Math.floor(H_res / 2);
-  ctx.fillStyle = '#32323c';
+  ctx.fillStyle = '#000000'; // Make center hole pure black so it gets extruded cleanly
   ctx.beginPath();
   ctx.arc(center_x, center_y, Math.round(5 * pixels_per_mm), 0, Math.PI * 2);
   ctx.fill();
@@ -316,38 +318,42 @@ export function assembleCrossFoldLayout(
   drawPanel(left, 0, base_y_start);
   drawPanel(right, base_x_end, base_y_start, 1); 
   
-  ctx.setLineDash([5, 5]);
-  ctx.strokeStyle = '#7f7f8c';
-  ctx.lineWidth = 2;
+  if (panel_bg !== 255) {
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = '#7f7f8c';
+    ctx.lineWidth = 2;
+    
+    ctx.beginPath();
+    ctx.moveTo(base_x_start, base_y_start);
+    ctx.lineTo(base_x_end, base_y_start);
+    ctx.moveTo(base_x_start, base_y_end);
+    ctx.lineTo(base_x_end, base_y_end);
+    ctx.moveTo(base_x_start, base_y_start);
+    ctx.lineTo(base_x_start, base_y_end);
+    ctx.moveTo(base_x_end, base_y_start);
+    ctx.lineTo(base_x_end, base_y_end);
+    ctx.stroke();
+    ctx.setLineDash([]); 
+  }
   
-  ctx.beginPath();
-  ctx.moveTo(base_x_start, base_y_start);
-  ctx.lineTo(base_x_end, base_y_start);
-  ctx.moveTo(base_x_start, base_y_end);
-  ctx.lineTo(base_x_end, base_y_end);
-  ctx.moveTo(base_x_start, base_y_start);
-  ctx.lineTo(base_x_start, base_y_end);
-  ctx.moveTo(base_x_end, base_y_start);
-  ctx.lineTo(base_x_end, base_y_end);
-  ctx.stroke();
-  ctx.setLineDash([]); 
-  
-  ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(0, 0, canvas_w, canvas_h);
-  
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, base_y_start); ctx.lineTo(base_x_start, base_y_start);
-  ctx.moveTo(0, base_y_end); ctx.lineTo(base_x_start, base_y_end);
-  ctx.moveTo(base_x_end, base_y_start); ctx.lineTo(canvas_w, base_y_start);
-  ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(canvas_w, base_y_end);
-  
-  ctx.moveTo(base_x_start, 0); ctx.lineTo(base_x_start, base_y_start);
-  ctx.moveTo(base_x_end, 0); ctx.lineTo(base_x_end, base_y_start);
-  ctx.moveTo(base_x_start, base_y_end); ctx.lineTo(base_x_start, canvas_h);
-  ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(base_x_end, canvas_h);
-  ctx.stroke();
+  if (panel_bg !== 255) {
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(0, 0, canvas_w, canvas_h);
+    
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, base_y_start); ctx.lineTo(base_x_start, base_y_start);
+    ctx.moveTo(0, base_y_end); ctx.lineTo(base_x_start, base_y_end);
+    ctx.moveTo(base_x_end, base_y_start); ctx.lineTo(canvas_w, base_y_start);
+    ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(canvas_w, base_y_end);
+    
+    ctx.moveTo(base_x_start, 0); ctx.lineTo(base_x_start, base_y_start);
+    ctx.moveTo(base_x_end, 0); ctx.lineTo(base_x_end, base_y_start);
+    ctx.moveTo(base_x_start, base_y_end); ctx.lineTo(base_x_start, canvas_h);
+    ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(base_x_end, canvas_h);
+    ctx.stroke();
+  }
   
   if (draw_slits) {
     let slit_w = Math.max(1, Math.round(3 * pixels_per_mm));
@@ -360,12 +366,14 @@ export function assembleCrossFoldLayout(
     ctx.fillRect(base_x_end - Math.floor(slit_l/2), center_y - Math.floor(slit_w/2), slit_l, slit_w);
   }
   
-  ctx.fillStyle = '#8a8a9e';
-  ctx.font = '14px Outfit';
-  ctx.fillText("LEFT", 20, center_y + 5);
-  ctx.fillText("RIGHT", base_x_end + 20, center_y + 5);
-  ctx.fillText("TOP", base_x_start + 20, 30);
-  ctx.fillText("BOTTOM", base_x_start + 20, base_y_end + 30);
+  if (panel_bg !== 255) {
+    ctx.fillStyle = '#8a8a9e';
+    ctx.font = '14px Outfit';
+    ctx.fillText("LEFT", 20, center_y + 5);
+    ctx.fillText("RIGHT", base_x_end + 20, center_y + 5);
+    ctx.fillText("TOP", base_x_start + 20, 30);
+    ctx.fillText("BOTTOM", base_x_start + 20, base_y_end + 30);
+  }
   
   return canvas;
 }

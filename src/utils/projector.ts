@@ -546,7 +546,7 @@ export function extrudePanelToSTL(
     // Map to store Level 1 shapes (outer details)
     const shapeMap = new Map<number, THREE.Shape>();
 
-    // 1. First pass: build Level 1 shapes (CCW) and Level 2 holes (CW)
+    // 1. First pass: build all Level 1 shapes (CCW)
     for (let i = 0; i < contours.size(); i++) {
       const contour = contours.get(i);
       if (contour.rows < 3) continue;
@@ -557,24 +557,41 @@ export function extrudePanelToSTL(
       const h = hierarchy.intPtr(0, i);
       const parentIdx = h[3];
 
-      const points: THREE.Vector2[] = [];
-      for (let j = 0; j < contour.rows; j++) {
-        const c_val = contour.data32S[j * 2];
-        const r_val = contour.data32S[j * 2 + 1];
-        points.push(new THREE.Vector2(c_val, height - r_val));
-      }
-
       if (parentIdx === -1) {
-        // Level 1: Solid Detail Shape -> Must be Counter-Clockwise
+        const points: THREE.Vector2[] = [];
+        for (let j = 0; j < contour.rows; j++) {
+          const c_val = contour.data32S[j * 2];
+          const r_val = contour.data32S[j * 2 + 1];
+          points.push(new THREE.Vector2(c_val, height - r_val));
+        }
         forceCounterClockwise(points);
         const detailShape = new THREE.Shape(points);
         shapes.push(detailShape);
         shapeMap.set(i, detailShape);
-      } else {
-        // Level 2: Cutout Hole inside Level 1 Shape -> Must be Clockwise
-        forceClockwise(points);
+      }
+    }
+
+    // 2. Second pass: link Level 2 holes (CW) to parent shapes
+    for (let i = 0; i < contours.size(); i++) {
+      const h = hierarchy.intPtr(0, i);
+      const parentIdx = h[3];
+
+      if (parentIdx !== -1) {
+        const contour = contours.get(i);
+        if (contour.rows < 3) continue;
+
+        const area = cv.contourArea(contour);
+        if (area < 2) continue;
+
         const parentShape = shapeMap.get(parentIdx);
         if (parentShape) {
+          const points: THREE.Vector2[] = [];
+          for (let j = 0; j < contour.rows; j++) {
+            const c_val = contour.data32S[j * 2];
+            const r_val = contour.data32S[j * 2 + 1];
+            points.push(new THREE.Vector2(c_val, height - r_val));
+          }
+          forceClockwise(points);
           parentShape.holes.push(new THREE.Path(points));
         }
       }

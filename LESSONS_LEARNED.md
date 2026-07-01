@@ -100,6 +100,12 @@ This document records the mistakes made, user complaints, and implementation rul
     - **Solid Mode** (`panelBg === 0`): Manually constructs the CCW outer rectangular frame of the panel and subtracts the contours as CW holes, preserving the solid wall plate with detail cutouts.
     - **Cutout Mode** (`panelBg === 255`): Extrudes only the detail shapes themselves (Level 1 contours as CCW outer shapes, Level 2 contours as CW inner holes). This removes all forced rectangular background boundaries, frames, or extra margins, ensuring the 3D model contains only the actual vector details, matching the individual exported 2D files exactly.
 
+### 15. Two-Pass Shape/Hole Extraction (Cutout Mode Detail Losses)
+- **Complaint**: Left and Right walls in Cutout mode rendered as completely solid blocks (losing inner cutouts/details).
+- **Resolution**:
+  - In Cutout mode, OpenCV's contour list is not sorted by parent-child hierarchy. A single-pass loop resulted in trying to add Level 2 holes to parent Level 1 shapes before the parent shape was registered in the `shapeMap`.
+  - Implemented a strict two-pass parser: Pass 1 loops through the contours to construct and map all Level 1 parent shapes. Pass 2 loops to extract and successfully link Level 2 holes (`parentShape.holes.push(new THREE.Path(points))`) to their registered parents. This preserves all fine details and holes inside solid regions.
+
 ---
 
 ## 💡 Developer Guidelines (Rules for Future Edits)

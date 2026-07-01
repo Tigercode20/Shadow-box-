@@ -19,18 +19,18 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
   onStlsGenerated,
 }) => {
   // Placement
-  const [scale, setScale] = useState<number>(100);
+  const [scale, setScale] = useState<number>(50);
   const [offsetX, setOffsetX] = useState<number>(0);
-  const [offsetY, setOffsetY] = useState<number>(100);
+  const [offsetY, setOffsetY] = useState<number>(2);
 
   // Box dimensions
   const [boxW, setBoxW] = useState<number>(114);
   const [boxH, setBoxH] = useState<number>(150);
-  const [boxD, setBoxD] = useState<number>(70);
+  const [boxD, setBoxD] = useState<number>(80);
 
   // Optical Settings
   const [lightZ, setLightZ] = useState<number>(130);
-  const [frontZ, setFrontZ] = useState<number>(80);
+  const [frontZ, setFrontZ] = useState<number>(70);
   const [targetW, setTargetW] = useState<number>(1140);
   const [targetH, setTargetH] = useState<number>(1500);
 

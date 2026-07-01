@@ -487,10 +487,9 @@ export function extrudePanelToSTL(
       if (contour.rows < 3) continue;
 
       const area = cv.contourArea(contour);
-      if (area < 2) continue; // Skip tiny single-pixel noise
+      if (area < 0.5) continue; // Skip degenerate or zero-area noise
 
-      const h = hierarchy.intPtr(0, i);
-      const parentIdx = h[3];
+      const parentIdx = hierarchy.data32S[i * 4 + 3];
 
       const points: THREE.Vector2[] = [];
       for (let j = 0; j < contour.rows; j++) {
@@ -514,10 +513,9 @@ export function extrudePanelToSTL(
 
     // 2. Second pass: link Level 3 holes (CW) inside Level 2 islands
     for (let i = 0; i < contours.size(); i++) {
-      const h = hierarchy.intPtr(0, i);
-      const parentIdx = h[3];
+      const parentIdx = hierarchy.data32S[i * 4 + 3];
       if (parentIdx !== -1) {
-        const grandParentIdx = hierarchy.intPtr(0, parentIdx)[3];
+        const grandParentIdx = hierarchy.data32S[parentIdx * 4 + 3];
         if (grandParentIdx !== -1) {
           // Level 3 hole inside Level 2 island
           const parentIsland = holeToIslandMap.get(parentIdx);
@@ -552,10 +550,9 @@ export function extrudePanelToSTL(
       if (contour.rows < 3) continue;
 
       const area = cv.contourArea(contour);
-      if (area < 2) continue; // Skip tiny single-pixel noise
+      if (area < 0.5) continue; // Skip degenerate or zero-area noise
 
-      const h = hierarchy.intPtr(0, i);
-      const parentIdx = h[3];
+      const parentIdx = hierarchy.data32S[i * 4 + 3];
 
       if (parentIdx === -1) {
         const points: THREE.Vector2[] = [];
@@ -573,15 +570,14 @@ export function extrudePanelToSTL(
 
     // 2. Second pass: link Level 2 holes (CW) to parent shapes
     for (let i = 0; i < contours.size(); i++) {
-      const h = hierarchy.intPtr(0, i);
-      const parentIdx = h[3];
+      const parentIdx = hierarchy.data32S[i * 4 + 3];
 
       if (parentIdx !== -1) {
         const contour = contours.get(i);
         if (contour.rows < 3) continue;
 
         const area = cv.contourArea(contour);
-        if (area < 2) continue;
+        if (area < 0.5) continue; // Skip degenerate or zero-area noise
 
         const parentShape = shapeMap.get(parentIdx);
         if (parentShape) {

@@ -184,7 +184,7 @@ export function projectWallPanel(
       if (Z_wall >= Z_light) continue;
       
       let denom = Z_light - Z_wall;
-      let t = Z_light / denom;
+      let t = (Z_light - _Z_start) / denom;
       
       let X_w = X_wall * t;
       let Y_w = Y_wall * t;

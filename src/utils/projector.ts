@@ -264,8 +264,11 @@ export function assembleCrossFoldLayout(
   let H_res = Math.round(box_h * pixels_per_mm);
   let D_res = Math.round(box_d * pixels_per_mm);
   
-  let canvas_w = 2 * D_res + W_res;
-  let canvas_h = 2 * D_res + H_res;
+  // Gap of 10mm between panels to keep them physically separate in STL and templates
+  let gap = Math.round(10 * pixels_per_mm);
+  
+  let canvas_w = 2 * D_res + W_res + 2 * gap;
+  let canvas_h = 2 * D_res + H_res + 2 * gap;
   
   let canvas = document.createElement('canvas');
   canvas.width = canvas_w;
@@ -276,10 +279,10 @@ export function assembleCrossFoldLayout(
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas_w, canvas_h);
   
-  let base_x_start = D_res;
-  let base_y_start = D_res;
-  let base_x_end = D_res + W_res;
-  let base_y_end = D_res + H_res;
+  let base_x_start = D_res + gap;
+  let base_y_start = D_res + gap;
+  let base_x_end = D_res + gap + W_res;
+  let base_y_end = D_res + gap + H_res;
   
   if (panel_bg !== 255) {
     ctx.fillStyle = '#f0f0f5';
@@ -313,12 +316,10 @@ export function assembleCrossFoldLayout(
     ctx!.putImageData(imgData, dx, dy);
   }
   
-  
-  
   drawPanel(top, base_x_start, 0);
-  drawPanel(bottom, base_x_start, base_y_end, 0); 
+  drawPanel(bottom, base_x_start, base_y_end + gap, 0); 
   drawPanel(left, 0, base_y_start);
-  drawPanel(right, base_x_end, base_y_start, 1); 
+  drawPanel(right, base_x_end + gap, base_y_start, 1); 
   
   if (panel_bg !== 255) {
     ctx.setLineDash([5, 5]);

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCV } from '../../utils/opencv';
-import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas, extrudePanelToSTL, cvFlip } from '../../utils/projector';
+import { preprocessSilhouette, projectWallPanel, assembleCrossFoldLayout, drawContoursToCanvas, extrudePanelToSTL, cvFlip, generateFoldedBoxSTL } from '../../utils/projector';
 import { downloadCanvasAsImage, downloadCanvasAsPDF, downloadCanvasAsSVG, downloadCanvasAsSTL, exportZipArchive } from '../../utils/exporters';
 import { SliderControl } from '../Common/SliderControl';
 import type { GeneratedStl } from '../../App';
@@ -212,6 +212,26 @@ export const MakerPanel: React.FC<MakerPanelProps> = ({
       const targetPxPerMm = targetWPixels / targetW;
       const stlTarget = extrudePanelToSTL(targetPanelData, targetWPixels, targetHPixels, thickness, targetPxPerMm, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
       stlList.push({ name: 'Preprocessed Silhouette', buffer: stlTarget });
+
+      const stlFoldedBox = generateFoldedBoxSTL(
+        leftPanel,
+        rightPanel,
+        topPanel,
+        bottomPanel,
+        targetPanelData,
+        targetWPixels,
+        targetHPixels,
+        targetPxPerMm,
+        boxW,
+        boxH,
+        boxD,
+        lightZ,
+        frontZ,
+        resolution,
+        thickness,
+        panelType
+      );
+      stlList.push({ name: 'Folded Box', buffer: stlFoldedBox });
     }
 
     if (crossLayoutCanvas) {

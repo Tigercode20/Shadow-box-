@@ -39,11 +39,11 @@ export function preprocessSilhouette(
 
   let binary = new cv.Mat();
   let target_aspect = target_w_mm / target_h_mm;
-  
+
   // 1. Base binary threshold
   let thresh = new cv.Mat();
   cv.threshold(srcMat, thresh, 127, 255, cv.THRESH_BINARY);
-  
+
   if (use_edges) {
     let smoothed = new cv.Mat();
     cv.bilateralFilter(srcMat, smoothed, 9, 75, 75);
@@ -52,17 +52,17 @@ export function preprocessSilhouette(
     let kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
     cv.dilate(edges, edges, kernel);
     cv.bitwise_not(edges, binary);
-    
+
     smoothed.delete(); edges.delete();
   } else {
     thresh.copyTo(binary);
   }
-  
+
   // 2. Custom Shape & Grounding
   if (use_custom_shape && ground_bottom) {
     let body_mask = new cv.Mat();
     cv.threshold(binary, body_mask, 127, 255, cv.THRESH_BINARY_INV);
-    
+
     let h_mask = body_mask.rows;
     let w_mask = body_mask.cols;
     let cols_sum = new Int32Array(w_mask);
@@ -75,7 +75,7 @@ export function preprocessSilhouette(
       }
       cols_sum[c] = sum;
     }
-    
+
     let c_min = -1, c_max = -1;
     for (let c = 0; c < w_mask; c++) {
       if (cols_sum[c] > 0) {
@@ -83,12 +83,12 @@ export function preprocessSilhouette(
         c_max = c;
       }
     }
-    
+
     if (c_min !== -1) {
       let span_w = c_max - c_min;
       let start_c = Math.round(c_min + 0.225 * span_w);
       let end_c = Math.round(c_min + 0.775 * span_w);
-      
+
       for (let c = start_c; c < end_c; c++) {
         let r_max = -1;
         for (let r = h_mask - 1; r >= 0; r--) {
@@ -106,20 +106,20 @@ export function preprocessSilhouette(
     }
     body_mask.delete();
   }
-  
+
   thresh.delete();
-  
+
   // 3. Aspect ratio padding
   let img_h = binary.rows;
   let img_w = binary.cols;
   let img_aspect = img_w / img_h;
-  
+
   let padded;
   if (img_aspect > target_aspect) {
     let new_h = Math.round(img_w / target_aspect);
     let pad = Math.round((new_h - img_h) / 2);
     padded = new cv.Mat(new_h, img_w, cv.CV_8UC1, new cv.Scalar(255));
-    
+
     let rect = new cv.Rect(0, pad, img_w, img_h);
     let roi = padded.roi(rect);
     binary.copyTo(roi);
@@ -128,13 +128,13 @@ export function preprocessSilhouette(
     let new_w = Math.round(img_h * target_aspect);
     let pad = Math.round((new_w - img_w) / 2);
     padded = new cv.Mat(img_h, new_w, cv.CV_8UC1, new cv.Scalar(255));
-    
+
     let rect = new cv.Rect(pad, 0, img_w, img_h);
     let roi = padded.roi(rect);
     binary.copyTo(roi);
     roi.delete();
   }
-  
+
   binary.delete();
   return padded;
 }
@@ -159,7 +159,7 @@ export function projectWallPanel(
   let W_res = Math.round(box_w * pixels_per_mm);
   let H_res = Math.round(box_h * pixels_per_mm);
   let D_res = Math.round(box_d * pixels_per_mm);
-  
+
   let w: number, h: number;
   if (wall_name === 'left' || wall_name === 'right') {
     w = D_res;
@@ -168,18 +168,18 @@ export function projectWallPanel(
     w = W_res;
     h = D_res;
   }
-  
+
   let panelData = new Uint8Array(w * h);
   panelData.fill(panel_bg);
-  
+
   let tgt_w = targetImgData.width;
   let tgt_h = targetImgData.height;
   let tgt_pixels = targetImgData.data;
-  
+
   for (let r = 0; r < h; r++) {
     for (let c = 0; c < w; c++) {
       let X_wall = 0, Y_wall = 0, Z_wall = 0;
-      
+
       if (wall_name === 'left') {
         Z_wall = Z_end - (c / (D_res - 1)) * box_d;
         Y_wall = box_h / 2.0 - (r / (H_res - 1)) * box_h;
@@ -197,54 +197,54 @@ export function projectWallPanel(
         Z_wall = Z_end - (r / (D_res - 1)) * box_d;
         Y_wall = -box_h / 2.0;
       }
-      
+
       if (Z_wall >= Z_light) continue;
-      
+
       let denom = Z_light - Z_wall;
       if (Math.abs(denom) < 0.001) {
         denom = denom >= 0 ? 0.001 : -0.001;
       }
       let t = (Z_light - _Z_start) / denom;
-      
+
       let X_w = X_wall * t;
       let Y_w = Y_wall * t;
-      
+
       let X_w_trans = (X_w - offset_x) / scale_factor;
       let Y_w_trans = (Y_w - offset_y) / scale_factor;
-      
+
       let col_tgt_frac = (X_w_trans + target_w_mm / 2.0) / target_w_mm * (tgt_w - 1);
       let row_tgt_frac = ((target_h_mm / 2.0) - Y_w_trans) / target_h_mm * (tgt_h - 1);
-      
+
       if (col_tgt_frac >= 0 && col_tgt_frac < tgt_w && row_tgt_frac >= 0 && row_tgt_frac < tgt_h) {
         let c1 = Math.floor(col_tgt_frac);
         let c2 = Math.min(tgt_w - 1, c1 + 1);
         let r1 = Math.floor(row_tgt_frac);
         let r2 = Math.min(tgt_h - 1, r1 + 1);
-        
+
         let dc = col_tgt_frac - c1;
         let dr = row_tgt_frac - r1;
-        
+
         let val11 = tgt_pixels[(r1 * tgt_w + c1) * 4];
         let val12 = tgt_pixels[(r1 * tgt_w + c2) * 4];
         let val21 = tgt_pixels[(r2 * tgt_w + c1) * 4];
         let val22 = tgt_pixels[(r2 * tgt_w + c2) * 4];
-        
+
         let val = (1 - dc) * (1 - dr) * val11 +
-                  dc * (1 - dr) * val12 +
-                  (1 - dc) * dr * val21 +
-                  dc * dr * val22;
-                  
+          dc * (1 - dr) * val12 +
+          (1 - dc) * dr * val21 +
+          dc * dr * val22;
+
         panelData[r * w + c] = Math.round(val);
       }
     }
   }
-  
+
   if (panel_bg === 0) {
     for (let i = 0; i < panelData.length; i++) {
       panelData[i] = 255 - panelData[i];
     }
   }
-  
+
   return { data: panelData, width: w, height: h };
 }
 
@@ -263,43 +263,43 @@ export function assembleCrossFoldLayout(
   let W_res = Math.round(box_w * pixels_per_mm);
   let H_res = Math.round(box_h * pixels_per_mm);
   let D_res = Math.round(box_d * pixels_per_mm);
-  
+
   // Gap of 10mm between panels to keep them physically separate in STL and templates
-  let gap = Math.round(10 * pixels_per_mm);
-  
+  let gap = Math.round(5 * pixels_per_mm);
+
   let canvas_w = 2 * D_res + W_res + 2 * gap;
   let canvas_h = 2 * D_res + H_res + 2 * gap;
-  
+
   let canvas = document.createElement('canvas');
   canvas.width = canvas_w;
   canvas.height = canvas_h;
   let ctx = canvas.getContext('2d');
   if (!ctx) return canvas;
-  
+
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas_w, canvas_h);
-  
+
   let base_x_start = D_res + gap;
   let base_y_start = D_res + gap;
   let base_x_end = D_res + gap + W_res;
   let base_y_end = D_res + gap + H_res;
-  
+
   if (panel_bg !== 255) {
     ctx.fillStyle = '#f0f0f5';
     ctx.fillRect(base_x_start, base_y_start, W_res, H_res);
-    
+
     ctx.strokeStyle = '#646473';
     ctx.lineWidth = 2;
     ctx.strokeRect(base_x_start, base_y_start, W_res, H_res);
   }
-  
+
   let center_x = base_x_start + Math.floor(W_res / 2);
   let center_y = base_y_start + Math.floor(H_res / 2);
   ctx.fillStyle = '#000000'; // Make center hole pure black so it gets extruded cleanly
   ctx.beginPath();
   ctx.arc(center_x, center_y, Math.round(5 * pixels_per_mm), 0, Math.PI * 2);
   ctx.fill();
-  
+
   function drawPanel(panel: PanelResult, dx: number, dy: number, flipCode?: number) {
     let p = panel;
     if (flipCode !== undefined) {
@@ -315,17 +315,17 @@ export function assembleCrossFoldLayout(
     }
     ctx!.putImageData(imgData, dx, dy);
   }
-  
+
   drawPanel(top, base_x_start, 0);
-  drawPanel(bottom, base_x_start, base_y_end + gap, 0); 
+  drawPanel(bottom, base_x_start, base_y_end + gap, 0);
   drawPanel(left, 0, base_y_start);
-  drawPanel(right, base_x_end + gap, base_y_start, 1); 
-  
+  drawPanel(right, base_x_end + gap, base_y_start, 1);
+
   if (panel_bg !== 255) {
     ctx.setLineDash([5, 5]);
     ctx.strokeStyle = '#7f7f8c';
     ctx.lineWidth = 2;
-    
+
     ctx.beginPath();
     ctx.moveTo(base_x_start, base_y_start);
     ctx.lineTo(base_x_end, base_y_start);
@@ -336,39 +336,39 @@ export function assembleCrossFoldLayout(
     ctx.moveTo(base_x_end, base_y_start);
     ctx.lineTo(base_x_end, base_y_end);
     ctx.stroke();
-    ctx.setLineDash([]); 
+    ctx.setLineDash([]);
   }
-  
+
   if (panel_bg !== 255) {
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 3;
     ctx.strokeRect(0, 0, canvas_w, canvas_h);
-    
+
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, base_y_start); ctx.lineTo(base_x_start, base_y_start);
     ctx.moveTo(0, base_y_end); ctx.lineTo(base_x_start, base_y_end);
     ctx.moveTo(base_x_end, base_y_start); ctx.lineTo(canvas_w, base_y_start);
     ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(canvas_w, base_y_end);
-    
+
     ctx.moveTo(base_x_start, 0); ctx.lineTo(base_x_start, base_y_start);
     ctx.moveTo(base_x_end, 0); ctx.lineTo(base_x_end, base_y_start);
     ctx.moveTo(base_x_start, base_y_end); ctx.lineTo(base_x_start, canvas_h);
     ctx.moveTo(base_x_end, base_y_end); ctx.lineTo(base_x_end, canvas_h);
     ctx.stroke();
   }
-  
+
   if (draw_slits) {
     let slit_w = Math.max(1, Math.round(3 * pixels_per_mm));
     let slit_l = Math.max(1, Math.round(30 * pixels_per_mm));
     ctx.fillStyle = (panel_bg === 255) ? '#ffffff' : '#000000';
-    
-    ctx.fillRect(center_x - Math.floor(slit_w/2), base_y_start - Math.floor(slit_l/2), slit_w, slit_l);
-    ctx.fillRect(center_x - Math.floor(slit_w/2), base_y_end - Math.floor(slit_l/2), slit_w, slit_l);
-    ctx.fillRect(base_x_start - Math.floor(slit_l/2), center_y - Math.floor(slit_w/2), slit_l, slit_w);
-    ctx.fillRect(base_x_end - Math.floor(slit_l/2), center_y - Math.floor(slit_w/2), slit_l, slit_w);
+
+    ctx.fillRect(center_x - Math.floor(slit_w / 2), base_y_start - Math.floor(slit_l / 2), slit_w, slit_l);
+    ctx.fillRect(center_x - Math.floor(slit_w / 2), base_y_end - Math.floor(slit_l / 2), slit_w, slit_l);
+    ctx.fillRect(base_x_start - Math.floor(slit_l / 2), center_y - Math.floor(slit_w / 2), slit_l, slit_w);
+    ctx.fillRect(base_x_end - Math.floor(slit_l / 2), center_y - Math.floor(slit_w / 2), slit_l, slit_w);
   }
-  
+
   if (panel_bg !== 255) {
     ctx.fillStyle = '#8a8a9e';
     ctx.font = '14px Outfit';
@@ -377,7 +377,7 @@ export function assembleCrossFoldLayout(
     ctx.fillText("TOP", base_x_start + 20, 30);
     ctx.fillText("BOTTOM", base_x_start + 20, base_y_end + 30);
   }
-  
+
   return canvas;
 }
 
@@ -386,10 +386,10 @@ export function drawContoursToCanvas(canvas: HTMLCanvasElement, contours: any, h
   if (!ctx) return;
   let w = canvas.width;
   let h = canvas.height;
-  
+
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, w, h);
-  
+
   ctx.fillStyle = "#000000";
   for (let i = 0; i < contours.size(); i++) {
     let parent = hierarchy.data32S[i * 4 + 3];
@@ -398,7 +398,7 @@ export function drawContoursToCanvas(canvas: HTMLCanvasElement, contours: any, h
       ctx.fill();
     }
   }
-  
+
   ctx.fillStyle = "#ffffff";
   for (let i = 0; i < contours.size(); i++) {
     let parent = hierarchy.data32S[i * 4 + 3];
@@ -423,7 +423,7 @@ function drawSingleContour(ctx: CanvasRenderingContext2D, contour: any) {
   ctx.closePath();
 }
 
-export function extrudePanelToSTL(
+export function extrudePanelToGeometry(
   panelData: Uint8Array,
   width: number,
   height: number,
@@ -436,14 +436,14 @@ export function extrudePanelToSTL(
   lightZ?: number,
   frontZ?: number,
   panelBg: number = 255
-): ArrayBuffer {
+): THREE.BufferGeometry {
   const cv = getCV();
-  if (!cv) return new ArrayBuffer(84);
+  if (!cv) return new THREE.BufferGeometry();
 
   // Load into OpenCV mat using direct buffer copy to avoid Invalid array length error on large images
   const mat = new cv.Mat(height, width, cv.CV_8UC1);
   mat.data.set(panelData);
-  
+
   // We ALWAYS use THRESH_BINARY_INV because we want the solid details (value 0) to be white (255)
   // so that we can find their contours!
   const threshMat = new cv.Mat();
@@ -482,7 +482,7 @@ export function extrudePanelToSTL(
     // ==========================================
     // SOLID MODE: Solid plate with cutout holes
     // ==========================================
-    
+
     // Create the main rectangular outer shape in pixel space (oriented CCW)
     const outerPoints = [
       new THREE.Vector2(0, 0),
@@ -655,9 +655,9 @@ export function extrudePanelToSTL(
     let isOnBorder = false;
     if (isSlanted) {
       if (wallName === 'left' || wallName === 'right') {
-        isOnBorder = (x_mm_shifted <= eps || x_mm_shifted >= boxD! - eps || y_mm_shifted <= -boxH!/2.0 + eps || y_mm_shifted >= boxH!/2.0 - eps);
+        isOnBorder = (x_mm_shifted <= eps || x_mm_shifted >= boxD! - eps || y_mm_shifted <= -boxH! / 2.0 + eps || y_mm_shifted >= boxH! / 2.0 - eps);
       } else if (wallName === 'top' || wallName === 'bottom') {
-        isOnBorder = (x_mm_shifted <= -boxW!/2.0 + eps || x_mm_shifted >= boxW!/2.0 - eps || y_mm_shifted <= eps || y_mm_shifted >= boxD! - eps);
+        isOnBorder = (x_mm_shifted <= -boxW! / 2.0 + eps || x_mm_shifted >= boxW! / 2.0 - eps || y_mm_shifted <= eps || y_mm_shifted >= boxD! - eps);
       }
     }
 
@@ -678,7 +678,7 @@ export function extrudePanelToSTL(
       if (wallName === 'left' || wallName === 'right') {
         const Z_wall = (frontZ! + boxD!) - (cg / width) * boxD!;
         const Y_wall = (boxH! / 2.0) - (rg / height) * boxH!;
-        
+
         const Z_in = lightZ! + t_val * (Z_wall - lightZ!);
         const Y_in = t_val * Y_wall;
 
@@ -713,10 +713,12 @@ export function extrudePanelToSTL(
     posAttr.setY(i, y_mm);
   }
 
-  geometry.rotateX(-Math.PI / 2); // Rotate 90 degrees around X to lie flat on the floor (XZ plane)
   geometry.computeVertexNormals();
+  return geometry;
+}
 
-  // Convert BufferGeometry to Binary STL
+export function convertGeometryToSTL(geometry: THREE.BufferGeometry): ArrayBuffer {
+  const posAttr = geometry.getAttribute('position') as THREE.BufferAttribute;
   const normAttr = geometry.getAttribute('normal') as THREE.BufferAttribute;
   const numTriangles = posAttr.count / 3;
 
@@ -735,15 +737,15 @@ export function extrudePanelToSTL(
       ny = normAttr.getY(i);
       nz = normAttr.getZ(i);
     }
-    
+
     const v1x = posAttr.getX(i);
     const v1y = posAttr.getY(i);
     const v1z = posAttr.getZ(i);
-    
+
     const v2x = posAttr.getX(i + 1);
     const v2y = posAttr.getY(i + 1);
     const v2z = posAttr.getZ(i + 1);
-    
+
     const v3x = posAttr.getX(i + 2);
     const v3y = posAttr.getY(i + 2);
     const v3z = posAttr.getZ(i + 2);
@@ -752,16 +754,16 @@ export function extrudePanelToSTL(
     view.setFloat32(offset, nx, true);
     view.setFloat32(offset + 4, ny, true);
     view.setFloat32(offset + 8, nz, true);
-    
+
     // Write V1, V2, V3
     view.setFloat32(offset + 12, v1x, true);
     view.setFloat32(offset + 16, v1y, true);
     view.setFloat32(offset + 20, v1z, true);
-    
+
     view.setFloat32(offset + 24, v2x, true);
     view.setFloat32(offset + 28, v2y, true);
     view.setFloat32(offset + 32, v2z, true);
-    
+
     view.setFloat32(offset + 36, v3x, true);
     view.setFloat32(offset + 40, v3y, true);
     view.setFloat32(offset + 44, v3z, true);
@@ -770,6 +772,184 @@ export function extrudePanelToSTL(
     offset += 50;
   }
 
+  return buffer;
+}
+
+export function extrudePanelToSTL(
+  panelData: Uint8Array,
+  width: number,
+  height: number,
+  thicknessMm: number,
+  pixelsPerMm: number,
+  wallName?: string,
+  boxW?: number,
+  boxH?: number,
+  boxD?: number,
+  lightZ?: number,
+  frontZ?: number,
+  panelBg: number = 255
+): ArrayBuffer {
+  const geometry = extrudePanelToGeometry(
+    panelData, width, height, thicknessMm, pixelsPerMm,
+    wallName, boxW, boxH, boxD, lightZ, frontZ, panelBg
+  );
+  geometry.rotateX(-Math.PI / 2); // Rotate 90 degrees around X to lie flat on the floor (XZ plane)
+  geometry.computeVertexNormals();
+  const buffer = convertGeometryToSTL(geometry);
   geometry.dispose();
+  return buffer;
+}
+
+export function mergeGeometries(geos: THREE.BufferGeometry[]): THREE.BufferGeometry {
+  let totalVertices = 0;
+  let totalIndices = 0;
+  for (const geo of geos) {
+    const pos = geo.getAttribute('position');
+    if (!pos) continue;
+    totalVertices += pos.count;
+    if (geo.index) {
+      totalIndices += geo.index.count;
+    }
+  }
+
+  const positions = new Float32Array(totalVertices * 3);
+  const normals = new Float32Array(totalVertices * 3);
+  const indices = new Uint32Array(totalIndices);
+
+  let vertexOffset = 0;
+  let indexOffset = 0;
+
+  for (const geo of geos) {
+    const posAttr = geo.getAttribute('position') as THREE.BufferAttribute;
+    const normAttr = geo.getAttribute('normal') as THREE.BufferAttribute;
+    if (!posAttr) continue;
+    const count = posAttr.count;
+
+    // Copy positions and normals
+    positions.set(posAttr.array, vertexOffset * 3);
+    if (normAttr) {
+      normals.set(normAttr.array, vertexOffset * 3);
+    }
+
+    // Copy indices
+    if (geo.index) {
+      const indexArray = geo.index.array;
+      for (let i = 0; i < geo.index.count; i++) {
+        indices[indexOffset + i] = indexArray[i] + vertexOffset;
+      }
+      indexOffset += geo.index.count;
+    } else {
+      // If no index, generate sequential indices
+      for (let i = 0; i < count; i++) {
+        indices[indexOffset + i] = i + vertexOffset;
+      }
+      indexOffset += count;
+    }
+
+    vertexOffset += count;
+  }
+
+  const merged = new THREE.BufferGeometry();
+  merged.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  merged.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  merged.setIndex(new THREE.BufferAttribute(indices, 1));
+  return merged;
+}
+
+export function generateFoldedBoxSTL(
+  left: PanelResult,
+  right: PanelResult,
+  top: PanelResult,
+  bottom: PanelResult,
+  targetPanelData: Uint8Array,
+  targetWPixels: number,
+  targetHPixels: number,
+  targetPxPerMm: number,
+  boxW: number,
+  boxH: number,
+  boxD: number,
+  lightZ: number,
+  frontZ: number,
+  resolution: number,
+  thickness: number,
+  panelType: number
+): ArrayBuffer {
+  // 1. Generate the 5 geometries in flat space
+  const leftGeo = extrudePanelToGeometry(left.data, left.width, left.height, thickness, resolution, 'left', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const rightGeo = extrudePanelToGeometry(right.data, right.width, right.height, thickness, resolution, 'right', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const topGeo = extrudePanelToGeometry(top.data, top.width, top.height, thickness, resolution, 'top', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const bottomGeo = extrudePanelToGeometry(bottom.data, bottom.width, bottom.height, thickness, resolution, 'bottom', boxW, boxH, boxD, lightZ, frontZ, panelType);
+  const targetGeo = extrudePanelToGeometry(targetPanelData, targetWPixels, targetHPixels, thickness, targetPxPerMm, undefined, undefined, undefined, undefined, undefined, undefined, panelType);
+
+  // 2. Transform each geometry to its 3D folded position in the box
+  
+  // Left Wall
+  const posLeft = leftGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posLeft.count; i++) {
+    const x = posLeft.getX(i);
+    const y = posLeft.getY(i);
+    const z = posLeft.getZ(i);
+    posLeft.setXYZ(i, -boxW / 2.0 + z, y, x);
+  }
+  leftGeo.computeVertexNormals();
+
+  // Right Wall
+  const posRight = rightGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posRight.count; i++) {
+    const x = posRight.getX(i);
+    const y = posRight.getY(i);
+    const z = posRight.getZ(i);
+    posRight.setXYZ(i, boxW / 2.0 - z, y, x);
+  }
+  rightGeo.computeVertexNormals();
+
+  // Top Wall
+  const posTop = topGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posTop.count; i++) {
+    const x = posTop.getX(i);
+    const y = posTop.getY(i);
+    const z = posTop.getZ(i);
+    posTop.setXYZ(i, x, boxH / 2.0 - z, y);
+  }
+  topGeo.computeVertexNormals();
+
+  // Bottom Wall
+  const posBottom = bottomGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posBottom.count; i++) {
+    const x = posBottom.getX(i);
+    const y = posBottom.getY(i);
+    const z = posBottom.getZ(i);
+    posBottom.setXYZ(i, x, -boxH / 2.0 + z, y);
+  }
+  bottomGeo.computeVertexNormals();
+
+  // Target base (front panel) stays flat at Z = 0
+  const posTarget = targetGeo.getAttribute('position') as THREE.BufferAttribute;
+  for (let i = 0; i < posTarget.count; i++) {
+    const x = posTarget.getX(i);
+    const y = posTarget.getY(i);
+    const z = posTarget.getZ(i);
+    posTarget.setXYZ(i, x, y, z);
+  }
+  targetGeo.computeVertexNormals();
+
+  // 3. Merge all 5 geometries
+  const mergedGeo = mergeGeometries([leftGeo, rightGeo, topGeo, bottomGeo, targetGeo]);
+  
+  // 4. Rotate 90 degrees around X to lie flat on the floor (XZ plane)
+  mergedGeo.rotateX(-Math.PI / 2);
+  mergedGeo.computeVertexNormals();
+
+  // 5. Convert to Binary STL
+  const buffer = convertGeometryToSTL(mergedGeo);
+  
+  // Cleanup
+  leftGeo.dispose();
+  rightGeo.dispose();
+  topGeo.dispose();
+  bottomGeo.dispose();
+  targetGeo.dispose();
+  mergedGeo.dispose();
+
   return buffer;
 }
